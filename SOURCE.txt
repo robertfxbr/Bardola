@@ -1,0 +1,5 @@
+Bardo.gg — GPL-3.0
+Código-fonte completo e instruções de compilação:
+https://github.com/robertfxbr/Bardo.gg
+Cada versão publicada corresponde à tag v<versão> do repositório.
+Veja LICENSE e THIRD_PARTY_NOTICES.md.

@@ -1,0 +1,13 @@
+**/bin/
+**/obj/
+.build/
+work/
+outputs/
+*.pem
+*.key
+*.pfx
+*.p12
+*.log
+.env
+.env.*
+.vs/
