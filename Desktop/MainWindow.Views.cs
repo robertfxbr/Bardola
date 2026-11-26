@@ -33,6 +33,12 @@ public partial class MainWindow
             runes.Children.Add(Text(doc.Query.Mode==GameMode.Mayhem?"SEM RUNAS NESTE MODO":"RUNAS INDISPONÍVEIS",12,true,Accent,top:18));
             runes.Children.Add(Text(doc.Query.Mode==GameMode.Mayhem?"Desordem desativa runas. A importação automática envia os itens e preserva sua página.":"A fonte não retornou uma página validada. O Bardo.gg não vai substituir suas runas por uma sugestão incompleta.",12,false,Muted,top:10));
         }
+        var spells=new StackPanel();spells.Children.Add(Text("Feitiços de invocador",17,true));
+        if(v.SummonerSpells is {Count:2}){
+            try{foreach(int id in SpellRules.Order(v.SummonerSpells,doc.Query.Mode,preferences.FlashOnLeft)){var info=catalog.Spells.GetValueOrDefault(id);var row=new StackPanel{Orientation=Orientation.Horizontal,Margin=new Thickness(0,10,0,0)};var icon=new Image{Width=34,Height=34,Margin=new Thickness(0,0,10,0)};if(info is not null)LoadIcon(icon,info.Icon,lifetime.Token);row.Children.Add(icon);row.Children.Add(Text(info?.Name??SpellRules.Name(id),14,true));spells.Children.Add(row);}}
+            catch(System.IO.InvalidDataException){spells.Children.Add(Text("Par de feitiços não validado para este modo.",12,false,Muted,top:10));}
+        }else spells.Children.Add(Text("Atualize a build para consultar os feitiços desta fonte.",12,false,Muted,top:10));
+        RunePanel.Children.Add(Card(spells));
         RunePanel.Children.Add(Card(runes));
         if(v.Boots?.Count>0 && v.SkillPriority!="")RunePanel.Children.Add(Card(SkillContent(v)));
         if(doc.Augments?.Count>0){var a=new StackPanel();a.Children.Add(Text("Aumentos em destaque",16,true));var rows=new WrapPanel{Margin=new Thickness(0,12,0,0)};foreach(string name in doc.Augments)rows.Children.Add(Badge(name));a.Children.Add(rows);a.Children.Add(Text("Nomes da fonte em inglês · sem taxas de vitória",10,false,Muted,top:7));MatchupPanel.Children.Add(Card(a));}

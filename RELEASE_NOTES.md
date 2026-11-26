@@ -1,11 +1,11 @@
-Bardo.gg 0.3.0
+Bardo.gg 0.4.0
 
-- Nova identidade Bardo.gg e interface escura com destaque em dourado e verde.
-- Itens e runas automáticos na seleção, com confirmação de aplicação e backup de runas.
-- Configurações organizadas em cartões; painel opcional de estatísticas próprias, build e prioridade de habilidades.
-- Atualizações assinadas via GitHub Releases, instaladas em segundo plano para a próxima abertura.
-- Atalho fixo e migração das preferências locais da versão anterior.
+- Importação automática dos feitiços recomendados pela build, com Flash no D ou F.
+- Feitiços de fontes específicas para Rift, ARAM e ARAM: Desordem; validação e confirmação no cliente.
+- Cronômetros automáticos no minimapa pelo modo avançado nativo do LoL, configurável pelo Bardo.gg.
+- Contadores manuais das quatro relíquias de cura do ARAM, com duração ajustável e relógio da partida.
+- Atualização do cache legado para buscar os feitiços sem perder o fallback de itens/runas.
 
-Windows x64 com .NET Desktop Runtime 10. Execute `Instalar-Bardo.gg.exe` uma vez e use o atalho Bardo.gg. As próximas versões usam o mesmo atalho.
+As instalações existentes recebem esta versão pelo mesmo atalho, sem reinstalação. Para novos usuários: Windows x64 com .NET Desktop Runtime 10 e Instalar-Bardo.gg.exe.
 
-Limitações: importação validada em testes de protocolo; ainda precisa de validação na seleção real de uma partida. O painel é uma janela para modo sem bordas/segundo monitor. Cronômetros, feitiços automáticos e análises de outros jogadores não estão implementados.
+Os cronômetros do minimapa foram ativados e confirmados no cliente real. A importação de feitiços passou nos testes de protocolo e ainda precisa de validação em seleção real. A coleta de cura do ARAM não é fornecida pela API pública; os contadores de cura exigem marcação manual e não são detecção automática. Não há rastreamento de cooldowns inimigos.

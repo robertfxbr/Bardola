@@ -88,14 +88,15 @@ if(args.Contains("--live")) {
     string liveDir=Path.GetFullPath(Path.Combine(AppContext.BaseDirectory,"../../../../../live-cache"));
     using var remote=new RemoteData();var catalogService=new CatalogService(liveDir,remote);
     Catalog? catalog=null;
-    AsyncTest("LIVE catálogo oficial em português",async()=>{catalog=await catalogService.LoadAsync();True(catalog.Champions.Count>170);True(catalog.Items.ContainsKey(6655));Console.WriteLine($"  patch {catalog.Version}, {catalog.Champions.Count} campeões, {catalog.Items.Count} itens");});
+    AsyncTest("LIVE catálogo oficial em português",async()=>{catalog=await catalogService.LoadAsync();True(catalog.Champions.Count>170);True(catalog.Items.ContainsKey(6655));True(catalog.Spells.ContainsKey(4));Console.WriteLine($"  patch {catalog.Version}, {catalog.Champions.Count} campeões, {catalog.Items.Count} itens");});
     foreach(var mode in new[]{GameMode.Rift,GameMode.Aram,GameMode.Mayhem}) {
         AsyncTest("LIVE build Zilean "+mode,async()=>{
             var query=new BuildQuery(26,"zilean",mode,Tier:mode==GameMode.Rift?"emerald_plus":"all",Patch:catalog!.Patch);
             string page=await remote.BuildHtmlAsync(query,CancellationToken.None);
             var d=mode==GameMode.Mayhem?BuildParsers.ParseMayhem(page,query):BuildParsers.ParseLolalytics(page,query);
             True(d.Variants[0].Core.Count>=2);True(d.Variants.SelectMany(v=>v.Start.Concat(v.Core)).All(i=>catalog.Items.ContainsKey(i.Id)));
-            Console.WriteLine($"  {d.Source}, patch {d.Patch}, core {string.Join(',',d.Variants[0].Core.Select(i=>i.Id))}");
+            True(SpellRules.Order(d.Variants[0].SummonerSpells,mode,true).All(id=>catalog.Spells.ContainsKey(id)));
+            Console.WriteLine($"  {d.Source}, patch {d.Patch}, feitiços {string.Join(',',d.Variants[0].SummonerSpells!)}, core {string.Join(',',d.Variants[0].Core.Select(i=>i.Id))}");
         });
     }
     AsyncTest("LIVE Masters+ e função mid",async()=>{var query=new BuildQuery(103,"ahri",GameMode.Rift,"middle","master_plus",catalog!.Patch);var page=await remote.BuildHtmlAsync(query,CancellationToken.None);True(page.Contains("MASTER+",StringComparison.OrdinalIgnoreCase));var d=BuildParsers.ParseLolalytics(page,query);True(d.Variants[0].Core.Count>0);Console.WriteLine($"  Ahri {d.Role}, {d.Games} jogos");});

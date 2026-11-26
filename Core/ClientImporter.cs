@@ -10,8 +10,8 @@ public interface ILeagueApi : IDisposable
     Task<JsonNode?> SendAsync(HttpMethod method,string path,JsonNode? body,CancellationToken ct=default);
 }
 public record ImportSelection(string Session,int ChampionId,GameMode Mode,string Role,string Owner,long SummonerId);
-public record ImportOptions(bool Items=true,bool Runes=true,bool ReuseActivePage=true);
-public record ImportOutcome(string Items,string Runes,bool Success,bool Changed);
+public record ImportOptions(bool Items=true,bool Runes=true,bool ReuseActivePage=true,bool Spells=false,bool FlashOnLeft=true);
+public record ImportOutcome(string Items,string Runes,bool Success,bool Changed,string Spells="Desligado");
 
 public sealed class ClientImporter(string backupDirectory)
 {
@@ -37,14 +37,14 @@ public sealed class ClientImporter(string backupDirectory)
         await gate.WaitAsync(ct);
         try {
             var selection=await SelectionAsync(api,ct);
-            if(selection is null)return new("Aguardando seleção","Aguardando seleção",false,false);
-            try{Match(selection,document);}catch(InvalidDataException e){return new(e.Message,e.Message,false,false);}
+            if(selection is null)return new("Aguardando seleção","Aguardando seleção",false,false,"Aguardando seleção");
+            try{Match(selection,document);}catch(InvalidDataException e){return new(e.Message,e.Message,false,false,e.Message);}
             if(variant<0 || variant>=document.Variants.Count)return new("Build inválida","Build inválida",false,false);
             var build=document.Variants[variant];
             string key=selection.Owner+":"+selection.Session+":"+document.Query.CacheKey+":"+variant+":"+options;
-            if(!force && Volatile.Read(ref completedKey)==key)return new(options.Items?"Já aplicado":"Desligado",document.Query.Mode==GameMode.Mayhem?"Modo sem runas":options.Runes?"Já aplicadas":"Desligado",true,false);
+            if(!force && Volatile.Read(ref completedKey)==key)return new(options.Items?"Já aplicado":"Desligado",document.Query.Mode==GameMode.Mayhem?"Modo sem runas":options.Runes?"Já aplicadas":"Desligado",true,false,options.Spells?"Já aplicados":"Desligado");
             Interlocked.Exchange(ref completedKey,null); // Uma tentativa parcial pode modificar a página compartilhada.
-            string items=options.Items?"Aguardando":"Desligado",runes=options.Runes?"Aguardando":"Desligado";bool success=true,changed=false;
+            string items=options.Items?"Aguardando":"Desligado",runes=options.Runes?"Aguardando":"Desligado",spells=options.Spells?"Aguardando":"Desligado";bool success=true,changed=false;
             if(options.Items) {
                 try{await ApplyItems(api,selection,document,build,ct);items="Itens aplicados no LoL";changed=true;}
                 catch(Exception e) when(Recoverable(e,ct)){items="Itens: "+e.Message;success=false;}
@@ -53,9 +53,22 @@ public sealed class ClientImporter(string backupDirectory)
                 try{await ApplyRunes(api,selection,build.Runes,options.ReuseActivePage,ct);runes="Runas aplicadas e selecionadas";changed=true;}
                 catch(Exception e) when(Recoverable(e,ct)){runes="Runas: "+e.Message;success=false;}
             }else if(selection.Mode==GameMode.Mayhem)runes="Desordem não usa runas";
+            if(options.Spells){
+                try{await ApplySpells(api,selection,build.SummonerSpells,options.FlashOnLeft,ct);spells="Feitiços aplicados e confirmados";changed=true;}
+                catch(Exception e) when(Recoverable(e,ct)){spells=e.Message;success=false;}
+            }
             if(success)Interlocked.Exchange(ref completedKey,key);
-            return new(items,runes,success,changed);
+            return new(items,runes,success,changed,spells);
         }finally{gate.Release();}
+    }
+    static async Task ApplySpells(ILeagueApi api,ImportSelection expected,List<int>? recommendation,bool flashOnLeft,CancellationToken ct){
+        var pair=SpellRules.Order(recommendation,expected.Mode,flashOnLeft);
+        await Revalidate(api,expected,ct);ct.ThrowIfCancellationRequested();
+        await api.SendAsync(HttpMethod.Patch,"/lol-champ-select/v1/session/my-selection",new JsonObject{["spell1Id"]=pair[0],["spell2Id"]=pair[1]},ct);
+        var session=await api.GetAsync("/lol-champ-select/v1/session",ct);
+        var self=(session?["myTeam"] as JsonArray)?.FirstOrDefault(p=>N(p?["cellId"])==N(session?["localPlayerCellId"]));
+        if(N(self?["spell1Id"])!=pair[0]||N(self?["spell2Id"])!=pair[1])throw new InvalidDataException("o cliente não confirmou os feitiços; confira se estão disponíveis neste modo/nível");
+        await Revalidate(api,expected,ct);
     }
     async Task ApplyItems(ILeagueApi api,ImportSelection expected,BuildDocument doc,BuildVariant variant,CancellationToken ct)
     {

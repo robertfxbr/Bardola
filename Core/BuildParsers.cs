@@ -80,7 +80,7 @@ public static class BuildParsers
                 RunePage? page=primary.Count>0 && secondary.Count>0 ? new(Style(primary[0]),Style(secondary[0]),[..primary,..secondary,..mods]) : null;
                 string sequence=S(v["skillorder"]?["id"]);
                 sequence=new string(sequence.Select(c=>c switch {'1'=>'Q','2'=>'W','3'=>'E','4'=>'R',_=>' '}).Where(c=>c!=' ').ToArray());
-                variants.Add(new(key=="pick"?"Mais jogada":"Alternativa por vitórias",start,core,alternatives,S(v["skillpriority"]?["id"]),sequence,page,I(items?["core"]?["n"]),D(items?["core"]?["wr"])));
+                variants.Add(new(key=="pick"?"Mais jogada":"Alternativa por vitórias",start,core,alternatives,S(v["skillpriority"]?["id"]),sequence,page,I(items?["core"]?["n"]),D(items?["core"]?["wr"]),SummonerSpells:Ids(v["sums"]?["ids"])));
             }
             if(variants.Count==0) throw new InvalidDataException("Sem recomendações disponíveis para este contexto.");
             return new(query,patch,"LoLalytics",Url(query),DateTimeOffset.UtcNow,variants,D(header["wr"]),I(header["n"]),role,Ids(header["counters"]?["strong"]),Ids(header["counters"]?["weak"]),
@@ -118,8 +118,11 @@ public static class BuildParsers
         foreach(Match m in Regex.Matches(cardsSection,@"href=""/aram-mayhem/augments/[^""/]+""[^>]*>(.*?)</a>",RegexOptions.Singleline)) {
             string name=Clean(m.Groups[1].Value);if(name!="" && !cards.Contains(name))cards.Add(name);if(cards.Count==9)break;
         }
+        var spellSection=Regex.Match(visible,@"<h3\b[^>]*>Summoner spells</h3>(.*?)(?=<h[234]\b|$)",RegexOptions.Singleline|RegexOptions.IgnoreCase).Groups[1].Value;
+        var firstPair=Regex.Match(spellSection,@"<li\b[^>]*>(.*?)</li>",RegexOptions.Singleline|RegexOptions.IgnoreCase).Groups[1].Value;
+        var spells=Regex.Matches(firstPair,@"/img/spell/(Summoner[A-Za-z]+)\.png",RegexOptions.IgnoreCase).Select(m=>SpellRules.Id(m.Groups[1].Value)).ToList();
         string? date=Regex.Match(html,"\"dateModified\":\"([^\"]+)\"") is {Success:true} dt?dt.Groups[1].Value:null;
-        return new(query,patch,"LazyElo / ARAMKit",expected,DateTimeOffset.UtcNow,[new("Caminho principal de Desordem",start,core,alternatives,priority,Boots:boots)],
+        return new(query,patch,"LazyElo / ARAMKit",expected,DateTimeOffset.UtcNow,[new("Caminho principal de Desordem",start,core,alternatives,priority,Boots:boots,SummonerSpells:spells)],
             Augments:cards,Note:"Desordem desativa runas. Fonte específica deste modo; aumentos exibidos sem taxas de vitória.",SourceDate:date);
     }
 

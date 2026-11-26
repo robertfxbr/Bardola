@@ -93,11 +93,16 @@ static class Program
         Check("overlay calcula CS por minuto com os dados do jogador",()=>{
             var prefs=(Preferences)Get("preferences")!;prefs.OverlayStats=true;Set("snapshot",new GameSnapshot(true,"Partida em andamento",26,"CLASSIC",600,Kills:3,Deaths:1,Assists:5,Cs:80));var panel=new StackPanel();Invoke("FillOverlay",panel);True(Descendants<TextBlock>(panel).Any(t=>t.Text.Contains("8,0 CS/min")||t.Text.Contains("8.0 CS/min")));prefs.OverlayStats=false;
         });
+        Check("importação só de feitiços funciona com itens e runas desligados",()=>{
+            Control<CheckBox>("AutoItems").IsChecked=false;Control<CheckBox>("AutoRunes").IsChecked=false;Control<CheckBox>("AutoSpells").IsChecked=true;fakeClient.Spell1=3;fakeClient.Spell2=14;Set("lastImportKey","");Set("lastImportAttempt","");Set("ready",true);Pump((Task)Invoke("RunAutoImport",true,false)!);True(fakeClient.Spell1==4&&fakeClient.Spell2==7);True(Control<TextBlock>("SpellImportText").Text.Contains("confirmados"));Set("ready",false);
+        });
+        Check("ajustes oferecem posição do Flash e cronômetros com marcação manual explícita",()=>{Invoke("BuildResearch");var texts=Descendants<TextBlock>(Control<StackPanel>("ResearchDetails")).Select(t=>t.Text).ToList();True(texts.Any(t=>t=="Posição do Flash"));True(texts.Any(t=>t.Contains("Todos os cronômetros no minimapa")));True(texts.Any(t=>t.Contains("contadores são manuais")));});
         if(args.Length==2 && args[0] is "--render" or "--render-rift" or "--render-settings") {
             var realCatalogPath=Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),"NexoLoL","catalog.json");
             if(File.Exists(realCatalogPath)) {
                 var real=JsonSerializer.Deserialize<Catalog>(File.ReadAllText(realCatalogPath))!;Set("catalog",real);var iconService=new CatalogService(Path.GetDirectoryName(realCatalogPath)!,new RemoteData());Set("catalogService",iconService);
                 var images=new[]{8214,8226,8210,8232,8105,8126}.Where(real.Runes.ContainsKey).Select(id=>iconService.IconAsync(real.Runes[id].Icon)).ToArray();Pump(Task.WhenAll(images));Console.WriteLine("Rune icons ready: "+images.Count(t=>t.Result is {Length:>0}));
+                Control<CheckBox>("AutoItems").IsChecked=true;Control<CheckBox>("AutoRunes").IsChecked=true;Control<CheckBox>("AutoSpells").IsChecked=true;
                 bool rift=args[0]!="--render";
                 q=new(26,"zilean",rift?GameMode.Rift:GameMode.Mayhem,Tier:rift?"emerald_plus":"all",Patch:real.Patch);string page=File.ReadAllText(Path.GetFullPath(rift?"Tests/Fixtures/lolalytics-zilean-factual.html":"Tests/Fixtures/mayhem-zilean-factual.html"));
                 Control<ComboBox>("ModeBox").SelectedIndex=rift?0:2;Control<ComboBox>("ChampionBox").ItemsSource=real.Champions;Control<ComboBox>("ChampionBox").SelectedItem=real.Champions.First(c=>c.Id==26);
@@ -105,10 +110,11 @@ static class Program
                 var load=(Task)Invoke("LoadBuild",true)!;
                 Pump(load);Set("ready",false);
                 Control<TextBlock>("ConnectionText").Text="Prévia da interface";
-                Invoke("ImportStatus","Itens: aguardando seleção de campeão","Runas: aguardando seleção de campeão",false);
+                Invoke("ImportStatus","Itens: aguardando seleção de campeão","Runas: aguardando seleção de campeão",false,"Feitiços: aguardando seleção de campeão");
                 var frame=new DispatcherFrame();var timer=new DispatcherTimer{Interval=TimeSpan.FromMilliseconds(800)};timer.Tick+=(_,_)=>{timer.Stop();frame.Continue=false;};timer.Start();Dispatcher.PushFrame(frame);
                 if(args[0]=="--render-settings"){Invoke("BuildResearch");Invoke("ShowResearch",window,new RoutedEventArgs());}
-                root.Measure(new Size(1264,780));root.Arrange(new Rect(0,0,1264,780));root.UpdateLayout();var bitmap=new RenderTargetBitmap(1264,780,96,96,PixelFormats.Pbgra32);bitmap.Render(root);var encoder=new PngBitmapEncoder();encoder.Frames.Add(BitmapFrame.Create(bitmap));using var file=File.Create(args[1]);encoder.Save(file);Console.WriteLine("Rendered in memory: "+args[1]);
+                int renderHeight=args[0]=="--render-settings"?1120:780;
+                root.Measure(new Size(1264,renderHeight));root.Arrange(new Rect(0,0,1264,renderHeight));root.UpdateLayout();var bitmap=new RenderTargetBitmap(1264,renderHeight,96,96,PixelFormats.Pbgra32);bitmap.Render(root);var encoder=new PngBitmapEncoder();encoder.Frames.Add(BitmapFrame.Create(bitmap));using var file=File.Create(args[1]);encoder.Save(file);Console.WriteLine("Rendered in memory: "+args[1]);
             }
         }
         window.Close();app.Shutdown();Directory.Delete(directory,true);Console.WriteLine($"{passed} passed, {failed} failed · nenhuma janela exibida");return failed>0?1:0;

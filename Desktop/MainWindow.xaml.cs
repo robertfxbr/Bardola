@@ -63,6 +63,7 @@ public partial class MainWindow : Window
         catalogService=new(dataRoot,remote);builds=new(Path.Combine(dataRoot,"builds"),remote.BuildHtmlAsync);
         try {
             preferences=Read<Preferences>("preferences-v2.json")??Read<Preferences>("preferences.json")??new();
+            if(preferences.RelicSeconds is <30 or >300 || !double.IsFinite(preferences.RelicSeconds))preferences.RelicSeconds=90;
             sessions.AddRange((Read<List<LocalSession>>("sessions.json")??[]).Take(30));
             catalog=await catalogService.LoadAsync(lifetime.Token);
             ChampionBox.ItemsSource=catalog.Champions;
@@ -70,7 +71,7 @@ public partial class MainWindow : Window
             ModeBox.SelectedIndex=(int)(preferences.Last?.Mode??GameMode.Rift);
             SelectTag(RoleBox,preferences.Last?.Role??"default");SelectTag(TierBox,preferences.Last?.Tier??"emerald_plus");
             AutoDetect.IsChecked=preferences.AutoDetect;
-            AutoItems.IsChecked=preferences.AutoImportItems;AutoRunes.IsChecked=preferences.AutoImportRunes;
+            AutoItems.IsChecked=preferences.AutoImportItems;AutoRunes.IsChecked=preferences.AutoImportRunes;AutoSpells.IsChecked=preferences.AutoImportSpells;
             snapshot=await game.PollAsync(catalog,lifetime.Token);UpdateConnection();
             if(AutoDetect.IsChecked==true)ApplyDetection(true);
             ready=true;UpdateModeControls();SetNav(BuildNav);BuildResearch();RenderAccount();pollTimer.Start();StartUpdates();
@@ -201,7 +202,7 @@ public partial class MainWindow : Window
                 if(sessions.Count>30)sessions.RemoveRange(30,sessions.Count-30);
                 try{await Storage.WriteAsync(Path.Combine(dataRoot,"sessions.json"),JsonSerializer.Serialize(sessions),lifetime.Token);}catch(IOException) {}
             }
-            snapshot=next;UpdateConnection();UpdateOverlay();if(AutoDetect.IsChecked==true)ApplyDetection();
+            snapshot=next;UpdateConnection();UpdateTimerClock();UpdateOverlay();_=ApplyNativeTimerPreference();if(AutoDetect.IsChecked==true)ApplyDetection();
             if(importBusy && activeImportSelection is { } importing && (next.Phase!="Seleção de campeão" || next.ChampionId!=importing.ChampionId || GameService.DetectMode(next.Mode)!=importing.Mode))importRequest?.Cancel();
             _=RunAutoImport();
             if(GamePage.Visibility==Visibility.Visible)RenderGame();
@@ -339,7 +340,7 @@ public partial class MainWindow : Window
     void ShowResearch(object sender,RoutedEventArgs e){BuildResearch();ShowPage(ResearchPage,ResearchNav,"Configurações","PREFERÊNCIAS DO BARDO.GG");}
     void ShowAccount(object sender,RoutedEventArgs e){ShowPage(AccountPage,AccountNav,"Sua conta do League.","PERFIL CONECTADO AO CLIENTE");RenderAccount();}
     void OnClosed(object? sender,EventArgs e)
-    {ready=false;pollTimer.Stop();selectionTimer.Stop();updateTimer.Stop();lifetime.Cancel();overlay?.Close();request?.Cancel();accountRequest?.Cancel();importRequest?.Cancel();compact?.Close();remote.Dispose();game.Dispose();lifetime.Dispose();}
+    {ready=false;pollTimer.Stop();selectionTimer.Stop();updateTimer.Stop();lifetime.Cancel();nativeTimerRequest?.Cancel();overlay?.Close();request?.Cancel();accountRequest?.Cancel();importRequest?.Cancel();compact?.Close();remote.Dispose();game.Dispose();lifetime.Dispose();}
 
     async void LoadIcon(Image target,string url,CancellationToken token)
     {
@@ -382,6 +383,11 @@ public sealed class Preferences
     public bool AutoImportItems {get;set;}=true;
     public bool AutoImportRunes {get;set;}=true;
     public bool ReuseActiveRunePage {get;set;}=true;
+    public bool AutoImportSpells {get;set;}=true;
+    public bool FlashOnLeft {get;set;}=true;
+    public bool NativeMinimapTimers {get;set;}=true;
+    public bool OverlayRelics {get;set;}
+    public double RelicSeconds {get;set;}=90;
     public bool OverlayStats {get;set;}
     public bool OverlayBuild {get;set;}
     public bool OverlaySkills {get;set;}

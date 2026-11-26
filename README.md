@@ -3,10 +3,11 @@
 Companheiro independente para **League of Legends**, em português, sem Overwolf e sem anúncios.
 
 - Builds por campeão, modo, função, elo e patch, com fonte e amostra visíveis.
-- Importação automática de itens e runas na seleção de campeão; backup da página reutilizada.
+- Importação automática de itens, runas e feitiços na seleção de campeão; Flash no D ou F e backup da página de runas reutilizada.
 - Perfil da conta ativa no cliente, ranques e histórico recente, sem pedir a senha do LoL.
 - Catálogo e imagens oficiais, favoritos, cache validado e exportação de conjuntos de itens.
 - Painel opcional de estatísticas próprias, build e prioridade de habilidades para modo sem bordas/segundo monitor.
+- Cronômetros automáticos no minimapa usando o modo avançado do próprio LoL; contadores manuais de cura do ARAM.
 - Atualizações assinadas em segundo plano, usadas na próxima abertura pelo mesmo atalho.
 
 ## Instalar
@@ -19,7 +20,7 @@ O instalador contém o aplicativo inicial e funciona sem internet para instalar.
 
 Versão inicial em desenvolvimento. Importação validada com testes de protocolo; validação em seleção real de campeão e do painel durante uma partida ainda pendente. Não há garantia de compatibilidade permanente com interfaces locais do LoL ou páginas de builds, que podem mudar. Não é um produto aprovado pela Riot Games.
 
-Cronômetros de objetivos/ARAM, feitiços automáticos, ultimates aliados, rotas da selva, comparação de inventários e análise de outros jogadores na tela de carregamento **ainda não estão implementados**. As configurações indicam essa limitação.
+Os cronômetros da selva são os nativos do LoL. Os contadores de cura do ARAM exigem marcação manual; a API pública não informa a coleta. Ultimates aliados, rotas da selva, comparação de inventários e análise de outros jogadores na tela de carregamento **ainda não estão implementados**. As configurações indicam essas limitações.
 
 ## Compilar e testar
 
@@ -33,19 +34,19 @@ dotnet run --project UiTests/NexoLoL.UiTests.csproj
 dotnet run --project UpdateTests/NexoLoL.UpdateTests.csproj
 ```
 
-Os nomes internos `NexoLoL` são legados. Os testes WPF renderizam em memória, sem abrir janelas. Os testes de importação usam um cliente simulado; não escrevem em uma conta real. As opções `--live`/`--account-live` dos testes principais fazem apenas consultas locais e devem ser executadas intencionalmente com o cliente aberto.
+Os nomes internos `NexoLoL` são legados. Os testes WPF renderizam em memória, sem abrir janelas. Os testes de importação usam um cliente simulado; não escrevem em uma conta real. As opções `--live`/`--account-live` dos testes principais fazem consultas às fontes e ao cliente, sem escritas no jogo. `--native-timers-live` no projeto ImportTests é uma verificação intencional de escrita: ativa o modo avançado de cronômetros no cliente real. Não use essa opção para executar apenas testes simulados.
 
 ## Publicar atualizações
 
 ```powershell
-./Publish-Update.ps1 -Version 0.3.1
+./Publish-Update.ps1 -Version 0.4.1
 # Após conferir os arquivos gerados:
-./Publish-Update.ps1 -Version 0.3.1 -Publish
+./Publish-Update.ps1 -Version 0.4.1 -Publish
 ```
 
 O script compila o app e instalador, assina o manifesto e pode publicar via GitHub CLI. A chave privada deve corresponder à chave pública fixada em `UpdateCore/ReleaseTrust.cs`; ela fica em `%LOCALAPPDATA%/Bardo.gg-Publisher/release-key.pem`, fora deste repositório. Sem essa chave é possível compilar e testar o código, mas não assinar atualizações aceitas pelas instalações existentes. Faça backup seguro da chave. Não gere outra chave para uma atualização da mesma instalação.
 
-Quem criar um fork deve configurar seu próprio repositório e par de chaves antes da primeira distribuição. Uma mesma versão não deve ser republicada com conteúdo diferente. Detalhes do mecanismo e limites estão em [docs/bardo-release.md](docs/bardo-release.md).
+Quem criar um fork deve configurar seu próprio repositório e par de chaves antes da primeira distribuição. Uma mesma versão não deve ser republicada com conteúdo diferente. Detalhes do atualizador estão em [docs/bardo-release.md](docs/bardo-release.md); feitiços e cronômetros em [docs/feitiços-e-cronometros.md](docs/feitiços-e-cronometros.md).
 
 ## Privacidade e licença
 

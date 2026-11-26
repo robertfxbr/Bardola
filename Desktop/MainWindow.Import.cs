@@ -19,8 +19,8 @@ public partial class MainWindow
     async Task RunAutoImport(bool force=false,bool displayed=false)
     {
         if(!ready || importBusy)return;
-        var options=new ImportOptions(AutoItems.IsChecked==true,AutoRunes.IsChecked==true,preferences.ReuseActiveRunePage);
-        if(!options.Items && !options.Runes){ImportStatus("Itens: desativado","Runas: desativado");return;}
+        var options=new ImportOptions(AutoItems.IsChecked==true,AutoRunes.IsChecked==true,preferences.ReuseActiveRunePage,AutoSpells.IsChecked==true,preferences.FlashOnLeft);
+        if(!options.Items && !options.Runes && !options.Spells){ImportStatus("Itens: desativado","Runas: desativado");return;}
         importBusy=true;importRequest?.Dispose();importRequest=CancellationTokenSource.CreateLinkedTokenSource(lifetime.Token);var token=importRequest.Token;
         try {
             using var api=leagueApiFactory();var selection=await ClientImporter.SelectionAsync(api,token);
@@ -38,13 +38,13 @@ public partial class MainWindow
             if(displayed) {
                 if(current is null){ImportStatus("Carregue uma build antes de aplicar","A seleção do LoL será conferida",true);return;}
                 document=current.Document;variant=variantIndex;
-            }else document=(await builds.GetAsync(query,false,token)).Document;
+            }else document=(await builds.GetAsync(query,false,token,requireSpells:options.Spells)).Document;
             if(token.IsCancellationRequested)return;
             var unknown=document.Variants[variant].Core.Concat(document.Variants[variant].Start).Any(i=>!catalog.Items.ContainsKey(i.Id));
-            if(unknown)throw new InvalidDataException("A build contém itens incompatíveis com o catálogo atual.");
+            if(options.Items&&unknown)throw new InvalidDataException("A build contém itens incompatíveis com o catálogo atual.");
             var outcome=await importer.ApplyAsync(api,document,variant,options,force,token);
             if(token.IsCancellationRequested)return;
-            ImportStatus("Itens: "+outcome.Items,"Runas: "+outcome.Runes,!outcome.Success);
+            ImportStatus("Itens: "+outcome.Items,"Runas: "+outcome.Runes,!outcome.Success,"Feitiços: "+outcome.Spells);
             if(outcome.Success)lastImportKey=key;
         }catch(OperationCanceledException) when(token.IsCancellationRequested) {}
         catch(Exception e) when(e is IOException or InvalidDataException or HttpRequestException or TimeoutException or System.Text.Json.JsonException or OperationCanceledException) {
@@ -53,16 +53,16 @@ public partial class MainWindow
             ImportStatus("Importação pendente",message,true);
         }finally{importBusy=false;activeImportSelection=null;}
     }
-    void ImportStatus(string items,string runes,bool warning=false)
+    void ImportStatus(string items,string runes,bool warning=false,string? spells=null)
     {
-        ItemImportText.Text=items;RuneImportText.Text=runes;
-        var color=Brush(warning?"#E5B477":"#91C8BC");ItemImportText.Foreground=color;RuneImportText.Foreground=color;
+        ItemImportText.Text=items;RuneImportText.Text=runes;SpellImportText.Text=spells??(AutoSpells.IsChecked==true?"Feitiços: aguardando seleção de campeão":"Feitiços: desativado");
+        var color=Brush(warning?"#E5B477":"#91C8BC");ItemImportText.Foreground=color;RuneImportText.Foreground=color;SpellImportText.Foreground=color;
     }
     async void ApplyNow(object sender,RoutedEventArgs e)=>await RunAutoImport(true,true);
     void ImportSettingsChanged(object sender,RoutedEventArgs e)
     {
         if(!ready)return;
-        preferences.AutoImportItems=AutoItems.IsChecked==true;preferences.AutoImportRunes=AutoRunes.IsChecked==true;
+        preferences.AutoImportItems=AutoItems.IsChecked==true;preferences.AutoImportRunes=AutoRunes.IsChecked==true;preferences.AutoImportSpells=AutoSpells.IsChecked==true;
         importRequest?.Cancel();lastImportKey="";lastImportAttempt="";_=SavePreferences();
         ImportStatus(preferences.AutoImportItems?"Itens: automático ligado":"Itens: desativado",preferences.AutoImportRunes?"Runas: automático ligado":"Runas: desativado");
     }

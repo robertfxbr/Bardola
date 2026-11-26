@@ -1,6 +1,7 @@
 using System.Text.Json.Nodes;
 using NexoLoL.Core;
 
+if(args.Contains("--native-timers-live")){using var api=LeagueClient.Open();await NativeTimerSettings.ConfigureAsync(api,true);Console.WriteLine("LIVE: cronômetros avançados ativados e confirmados pelo LoL.");return 0;}
 int passed=0,failed=0;
 async Task Test(string name,Func<Task> body){try{await body();passed++;Console.WriteLine("PASS "+name);}catch(Exception e){failed++;Console.WriteLine("FAIL "+name+": "+e.Message);}}
 void True(bool condition){if(!condition)throw new Exception("comportamento esperado não observado");}
@@ -27,4 +28,7 @@ await Test("preserva conjunto adicionado durante a revalidação",async()=>{usin
 await Test("restauração interrompe se a partida começar entre escritas",async()=>{using var api=new FakeApi{CanAdd=false};var i=Importer();await i.ApplyAsync(api,doc,0,new(Items:false));int before=api.Writes.Count(w=>w.Path=="/lol-perks/v1/currentpage");api.OnWrite=(m,p,b)=>{if(p.StartsWith("/lol-perks/v1/pages/"))api.Phase="InProgress";};try{await i.RestoreRunesAsync(api);}catch(InvalidDataException){}True(api.Writes.Count(w=>w.Path=="/lol-perks/v1/currentpage")==before);});
 await Test("restauração incompleta conserva backup para nova tentativa",async()=>{using var api=new FakeApi{CanAdd=false};var i=Importer();await i.ApplyAsync(api,doc,0,new(Items:false));api.IgnoreRuneName=true;bool rejected=false;try{await i.RestoreRunesAsync(api);}catch(InvalidDataException){rejected=true;}True(rejected);api.IgnoreRuneName=false;await i.RestoreRunesAsync(api);True(api.Pages[0]!["name"]!.ToString()=="Minha página");});
 await Test("A depois de falha parcial em B não usa confirmação antiga",async()=>{using var api=new FakeApi();var i=Importer();await i.ApplyAsync(api,doc,0,new(Items:false));api.Champion=103;var other=doc with{Query=q with{ChampionId=103,Slug="ahri"},Variants=[doc.Variants[0] with{Runes=new(8400,8200,[8465,8463,8473,8242,8226,8210,5007,5008,5001])}]};api.OnWrite=(m,p,b)=>{if(p=="/lol-perks/v1/currentpage")throw new HttpRequestException("falha depois de aplicar");};True(!(await i.ApplyAsync(api,other,0,new(Items:false))).Success);api.OnWrite=null;api.Champion=26;await i.ApplyAsync(api,doc,0,new(Items:false));var active=await api.GetAsync("/lol-perks/v1/currentpage");True(active!["primaryStyleId"]!.GetValue<int>()==8200);});
+await SpellTests.Run(Test,doc,Importer);
+await TimerTests.Run(Test);
+
 Directory.Delete(temp,true);Console.WriteLine($"{passed} passed, {failed} failed");return failed>0?1:0;
