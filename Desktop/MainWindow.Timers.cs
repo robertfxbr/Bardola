@@ -20,6 +20,7 @@ public partial class MainWindow
         try{
             using var api=leagueApiFactory();bool enabled=preferences.NativeMinimapTimers;
             await NativeTimerSettings.ConfigureAsync(api,enabled,token);
+            await NativeTimerSettings.ConfigureJungleAsync(api,preferences.JunglePath,token);
             if(!token.IsCancellationRequested)SetNativeTimerStatus(enabled?"Ativados no minimapa do LoL · configuração confirmada":"Modo básico do LoL · configuração confirmada");
         }catch(OperationCanceledException) when(token.IsCancellationRequested){}
         catch(Exception e) when(e is IOException or InvalidDataException or System.Net.Http.HttpRequestException or System.Text.Json.JsonException or OperationCanceledException){
@@ -29,12 +30,14 @@ public partial class MainWindow
     void SetNativeTimerStatus(string text){nativeTimerMessage=text;if(nativeTimerStatus is not null)nativeTimerStatus.Text=text;}
     void SetNativeTimers(bool value){preferences.NativeMinimapTimers=value;nativeTimerRequest?.Cancel();lastNativeTimerAttempt=DateTimeOffset.MinValue;SetNativeTimerStatus("Configuração pendente · será aplicada fora de uma partida.");_=SavePreferences();_=ApplyNativeTimerPreference();}
     void UpdateTimerClock(){
-        if(snapshot.GameTime>0){if(lastTimerGameTime>snapshot.GameTime+1)relicTimers.Reset();lastTimerGameTime=snapshot.GameTime;}
-        else if(snapshot.Phase is "Saguão" or "Seleção de campeão" or "Fim de partida" or "Cliente aberto"){relicTimers.Reset();lastTimerGameTime=0;}
+        if(snapshot.GameTime>0){if(lastTimerGameTime>snapshot.GameTime+1){relicTimers.Reset();ClearRelicReadings();}lastTimerGameTime=snapshot.GameTime;}
+        else if(snapshot.Phase is "Saguão" or "Seleção de campeão" or "Fim de partida" or "Cliente aberto"){relicTimers.Reset();ClearRelicReadings();lastTimerGameTime=0;}
     }
     void AddTimerSettings(){
         var panel=new StackPanel();panel.Children.Add(Text("Cronômetros",21,true));
         panel.Children.Add(SettingRow("Todos os cronômetros no minimapa","Ativa o modo avançado do próprio LoL para acampamentos e objetivos.",preferences.NativeMinimapTimers,SetNativeTimers));
+        panel.Children.Add(SettingRow("Rota recomendada da jungle","Mostra no minimapa a sequência inicial que o LoL recomenda para o seu campeão.",preferences.JunglePath,v=>{preferences.JunglePath=v;nativeTimerRequest?.Cancel();lastNativeTimerAttempt=DateTimeOffset.MinValue;_=SavePreferences();_=ApplyNativeTimerPreference();}));
+        AddAutoRelicSettings(panel);
         nativeTimerStatus=Text(nativeTimerMessage,12,false,Accent,top:12);panel.Children.Add(nativeTimerStatus);
         panel.Children.Add(SettingRow("Relíquias de cura do ARAM · manual","Um contador para cada relíquia. Clique após o clarão de cura para iniciar.",preferences.OverlayRelics,v=>{preferences.OverlayRelics=v;_=SavePreferences();UpdateOverlay();}));
         panel.Children.Add(Text("A coleta não é informada pela interface pública do jogo; estes contadores são manuais. O tempo é ajustável e segue o relógio da partida.",12,false,Muted,top:8));

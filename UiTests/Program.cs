@@ -97,6 +97,19 @@ static class Program
             Control<CheckBox>("AutoItems").IsChecked=false;Control<CheckBox>("AutoRunes").IsChecked=false;Control<CheckBox>("AutoSpells").IsChecked=true;fakeClient.Spell1=3;fakeClient.Spell2=14;Set("lastImportKey","");Set("lastImportAttempt","");Set("ready",true);Pump((Task)Invoke("RunAutoImport",true,false)!);True(fakeClient.Spell1==4&&fakeClient.Spell2==7);True(Control<TextBlock>("SpellImportText").Text.Contains("confirmados"));Set("ready",false);
         });
         Check("ajustes oferecem posição do Flash e cronômetros com marcação manual explícita",()=>{Invoke("BuildResearch");var texts=Descendants<TextBlock>(Control<StackPanel>("ResearchDetails")).Select(t=>t.Text).ToList();True(texts.Any(t=>t=="Posição do Flash"));True(texts.Any(t=>t.Contains("Todos os cronômetros no minimapa")));True(texts.Any(t=>t.Contains("contadores são manuais")));});
+        Check("OCR lê um tempo em recorte sintético sem capturar a tela",()=>{
+            var visual=new DrawingVisual();
+            using(var dc=visual.RenderOpen()){
+                dc.DrawRectangle(Brushes.Black,null,new Rect(0,0,1920,360));
+                var glyph=new FormattedText("0:37",System.Globalization.CultureInfo.InvariantCulture,FlowDirection.LeftToRight,new Typeface("Segoe UI"),14,Brushes.White,1);
+                dc.DrawText(glyph,new Point(960-glyph.Width/2,180-glyph.Height/2));
+            }
+            var frame=new RenderTargetBitmap(1920,360,96,96,PixelFormats.Pbgra32);frame.Render(visual);frame.Freeze();
+            var engine=Windows.Media.Ocr.OcrEngine.TryCreateFromUserProfileLanguages()??throw new Exception("OCR não disponível");
+            var reader=typeof(MainWindow).Assembly.GetType("NexoLoL.Desktop.ScoreboardReader")!;
+            var task=(Task<int?>)reader.GetMethod("ReadAsync")!.Invoke(null,[frame,new ClockPoint(.5,.5),engine])!;
+            Pump(task);True(task.Result==37);
+        });
         if(args.Length==2 && args[0] is "--render" or "--render-rift" or "--render-settings") {
             var realCatalogPath=Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),"NexoLoL","catalog.json");
             if(File.Exists(realCatalogPath)) {

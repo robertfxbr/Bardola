@@ -7,12 +7,12 @@ Companheiro independente para **League of Legends**, em português, sem Overwolf
 - Perfil da conta ativa no cliente, ranques e histórico recente, sem pedir a senha do LoL.
 - Catálogo e imagens oficiais, favoritos, cache validado e exportação de conjuntos de itens.
 - Painel opcional de estatísticas próprias, build e prioridade de habilidades para modo sem bordas/segundo monitor.
-- Cronômetros automáticos no minimapa usando o modo avançado do próprio LoL; contadores manuais de cura do ARAM.
+- Cronômetros automáticos no minimapa usando o modo avançado do próprio LoL; contadores de cura do ARAM sincronizados pelo placar.
 - Atualizações assinadas em segundo plano, usadas na próxima abertura pelo mesmo atalho.
 
 ## Instalar
 
-Windows x64 com **[.NET Desktop Runtime 10](https://dotnet.microsoft.com/download/dotnet/10.0)**. Baixe `Instalar-Bardo.gg.exe` em [Releases](https://github.com/robertfxbr/Bardo.gg/releases/latest), execute uma vez e use o atalho **Bardo.gg**. Não são necessários direitos de administrador. O app não substitui seu cliente do League.
+Windows 10 (2004 ou posterior) ou Windows 11 x64 com **[.NET Desktop Runtime 10](https://dotnet.microsoft.com/download/dotnet/10.0)**. Baixe `Instalar-Bardo.gg.exe` em [Releases](https://github.com/robertfxbr/Bardo.gg/releases/latest), execute uma vez e use o atalho **Bardo.gg**. Não são necessários direitos de administrador. O app não substitui seu cliente do League.
 
 O instalador contém o aplicativo inicial e funciona sem internet para instalar. Builds e imagens precisam de internet na primeira consulta. Depois da instalação, novas versões publicadas são baixadas automaticamente; a aplicação ocorre ao fechar e abrir o Bardo.gg, preservando preferências e favoritos.
 
@@ -20,7 +20,7 @@ O instalador contém o aplicativo inicial e funciona sem internet para instalar.
 
 Versão inicial em desenvolvimento. Importação validada com testes de protocolo; validação em seleção real de campeão e do painel durante uma partida ainda pendente. Não há garantia de compatibilidade permanente com interfaces locais do LoL ou páginas de builds, que podem mudar. Não é um produto aprovado pela Riot Games.
 
-Os cronômetros da selva são os nativos do LoL. Os contadores de cura do ARAM exigem marcação manual; a API pública não informa a coleta. Ultimates aliados, rotas da selva, comparação de inventários e análise de outros jogadores na tela de carregamento **ainda não estão implementados**. As configurações indicam essas limitações.
+Os cronômetros da selva são os nativos do LoL. A opção **Curas do ARAM no minimapa** lê os tempos visíveis no Tab por OCR local e conta sobre as relíquias em modo sem bordas. Calibre em Ajustes na primeira partida e segure Tab para sincronizar. A rota inicial da jungle usa a recomendação nativa do League para o campeão. Ultimates aliados, comparação de inventários e análise de outros jogadores na tela de carregamento **ainda não estão implementados**. As configurações indicam essas limitações.
 
 ## Compilar e testar
 

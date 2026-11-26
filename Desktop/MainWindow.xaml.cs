@@ -74,7 +74,7 @@ public partial class MainWindow : Window
             AutoItems.IsChecked=preferences.AutoImportItems;AutoRunes.IsChecked=preferences.AutoImportRunes;AutoSpells.IsChecked=preferences.AutoImportSpells;
             snapshot=await game.PollAsync(catalog,lifetime.Token);UpdateConnection();
             if(AutoDetect.IsChecked==true)ApplyDetection(true);
-            ready=true;UpdateModeControls();SetNav(BuildNav);BuildResearch();RenderAccount();pollTimer.Start();StartUpdates();
+            ready=true;UpdateModeControls();SetNav(BuildNav);BuildResearch();RenderAccount();pollTimer.Start();if(!relicPoll.IsEnabled)StartRelicPolling();StartUpdates();
             if(preferences.LinkAccount)_=ConnectAccount();
             await LoadBuild();
         }catch(OperationCanceledException) {}
@@ -340,7 +340,7 @@ public partial class MainWindow : Window
     void ShowResearch(object sender,RoutedEventArgs e){BuildResearch();ShowPage(ResearchPage,ResearchNav,"Configurações","PREFERÊNCIAS DO BARDO.GG");}
     void ShowAccount(object sender,RoutedEventArgs e){ShowPage(AccountPage,AccountNav,"Sua conta do League.","PERFIL CONECTADO AO CLIENTE");RenderAccount();}
     void OnClosed(object? sender,EventArgs e)
-    {ready=false;pollTimer.Stop();selectionTimer.Stop();updateTimer.Stop();lifetime.Cancel();nativeTimerRequest?.Cancel();overlay?.Close();request?.Cancel();accountRequest?.Cancel();importRequest?.Cancel();compact?.Close();remote.Dispose();game.Dispose();lifetime.Dispose();}
+    {ready=false;relicPoll.Stop();ClearRelicReadings();mapOverlay?.Close();calibrationWindow?.Close();pollTimer.Stop();selectionTimer.Stop();updateTimer.Stop();lifetime.Cancel();nativeTimerRequest?.Cancel();overlay?.Close();request?.Cancel();accountRequest?.Cancel();importRequest?.Cancel();compact?.Close();remote.Dispose();game.Dispose();lifetime.Dispose();}
 
     async void LoadIcon(Image target,string url,CancellationToken token)
     {
@@ -385,6 +385,12 @@ public sealed class Preferences
     public bool ReuseActiveRunePage {get;set;}=true;
     public bool AutoImportSpells {get;set;}=true;
     public bool FlashOnLeft {get;set;}=true;
+    public bool AutoMapRelics {get;set;}
+    public ClockPoint[]? ClockLocations {get;set;}
+    public ClockPoint[]? MapLocations {get;set;}
+    public int CalibrationWidth {get;set;}
+    public int CalibrationHeight {get;set;}
+    public bool JunglePath {get;set;}=true;
     public bool NativeMinimapTimers {get;set;}=true;
     public bool OverlayRelics {get;set;}
     public double RelicSeconds {get;set;}=90;
