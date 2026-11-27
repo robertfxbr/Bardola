@@ -1,4 +1,4 @@
-# Bardo.gg
+# Bardola
 
 Companheiro independente para **League of Legends**, em português, sem Overwolf e sem anúncios.
 
@@ -17,7 +17,7 @@ Companheiro independente para **League of Legends**, em português, sem Overwolf
 
 ## Instalar
 
-Windows 10 (2004 ou posterior) ou Windows 11 x64 com **[.NET Desktop Runtime 10](https://dotnet.microsoft.com/download/dotnet/10.0)**. Baixe `Instalar-Bardo.gg.exe` em [Releases](https://github.com/robertfxbr/Bardo.gg/releases/latest), execute uma vez e use o atalho **Bardo.gg**. Não são necessários direitos de administrador. O app não substitui seu cliente do League.
+Windows 10 (2004 ou posterior) ou Windows 11 x64 com **[.NET Desktop Runtime 10](https://dotnet.microsoft.com/download/dotnet/10.0)**. Baixe `Instalar-Bardo.gg.exe` em [Releases](https://github.com/robertfxbr/Bardola/releases/latest), execute uma vez e use o atalho **Bardo.gg**. Não são necessários direitos de administrador. O app não substitui seu cliente do League.
 
 O instalador contém o aplicativo inicial e funciona sem internet para instalar. Builds e imagens precisam de internet na primeira consulta. Depois da instalação, novas versões publicadas são baixadas automaticamente; a aplicação ocorre ao fechar e abrir o Bardo.gg, preservando preferências e favoritos.
 
