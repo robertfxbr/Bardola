@@ -68,6 +68,29 @@ static class Program
         });
         ((DispatcherTimer)Get("selectionTimer")!).Stop();Set("ready",false);
         Check("tela de conta oferece conexão explícita sem abrir login",()=>{Invoke("RenderAccount");var panel=Control<StackPanel>("AccountDetails");True(Descendants<Button>(panel).Any(b=>b.Name=="ConnectAccountButton"));True(Get("account") is null);});
+        Check("perfil público com LoL fechado mantém consulta separada da conta para importação",()=>{
+            Set("lookupText","Teste#BR1");Pump((Task)Invoke("LookupProfile")!);
+            True((Get("publicProfile") as GameAccount)?.RiotId=="Teste#BR1" && Get("account") is null);
+            var labels=Descendants<TextBlock>(Control<StackPanel>("AccountDetails")).Select(x=>x.Text);
+            True(labels.Any(t=>t.Contains("Perfil público")) && labels.Any(t=>t.Contains("6/2/10")));
+            Invoke("ClearPublicProfile");
+        });
+        Check("perfil sincronizado aparece com o cliente fechado e é removido ao desconectar",()=>{
+            var prefs=(Preferences)Get("preferences")!;
+            prefs.LinkAccount=true;prefs.ProfileSavedAt=DateTimeOffset.Now;
+            prefs.SavedProfile=new("Salvo#BR1",42,1,"BR",[],[]);
+            Invoke("RenderAccount");
+            True(Descendants<TextBlock>(Control<StackPanel>("AccountDetails")).Any(t=>t.Text.Contains("Salvo neste PC")));
+            Invoke("DisconnectAccount");True(prefs.SavedProfile is null);
+        });
+        Check("draft aparece antes do primeiro pick mesmo quando há um pós-jogo anterior",()=>{
+            Set("snapshot",new GameSnapshot(true,"Seleção de campeão",Mode:"CLASSIC",Role:"support",Draft:new(10,[],[],[],[],true)));
+            Set("draftPool",new DraftPick[]{new(26,90000,11)});
+            Set("draftTier","gold");Invoke("RenderGame");
+            var lines=Descendants<TextBlock>(Control<StackPanel>("GameDetails")).Select(t=>t.Text).ToList();
+            True(lines.Contains("Zilean") && lines.Any(t=>t.Contains("Maestria 11")) && lines.Any(t=>t.Contains("Ouro")) && lines.Any(t=>t.Contains("primeiro pick")));
+            Set("snapshot",new GameSnapshot(false,"Aguardando o LoL"));Invoke("UpdateDraft");
+        });
         Check("perfil conectado renderiza elo e histórico do próprio jogador",()=>{
             Set("account",new GameAccount("Conta de teste#BR1",82,1,"BR",[new("RANKED_SOLO_5x5","GOLD","II",55,18,12)],[new(123,26,"CLASSIC",true,4,2,18,105,1800,DateTimeOffset.UtcNow)]));
             Invoke("RenderAccount");var panel=Control<StackPanel>("AccountDetails");var texts=Descendants<TextBlock>(panel).Select(t=>t.Text).ToList();
@@ -211,11 +234,33 @@ static class Program
                 var png=new PngBitmapEncoder();png.Frames.Add(BitmapFrame.Create(frame));using var file=File.Create(args[1]);png.Save(file);
             }
         });
+        if(args.Length==2 && args[0]=="--render-profile"){
+            string cache=Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),"Bardo.gg");
+            Set("catalog",JsonSerializer.Deserialize<Catalog>(File.ReadAllText(Path.Combine(cache,"catalog.json")))!);
+            Set("catalogService",new CatalogService(cache,new RemoteData()));
+            Set("account",null);Set("lookupText","Teste#BR1");Pump((Task)Invoke("LookupProfile")!);
+            Invoke("ShowAccount",window,new RoutedEventArgs());
+            Control<TextBlock>("ConnectionText").Text="Demonstração · dados simulados";
+            Pump(Task.Delay(800));
+            root.Measure(new Size(1120,740));root.Arrange(new Rect(0,0,1120,740));root.UpdateLayout();
+            var frame=new RenderTargetBitmap(1120,740,96,96,PixelFormats.Pbgra32);frame.Render(root);
+            var png=new PngBitmapEncoder();png.Frames.Add(BitmapFrame.Create(frame));using var output=File.Create(args[1]);png.Save(output);
+        }
         window.Close();app.Shutdown();Directory.Delete(directory,true);Console.WriteLine($"{passed} passed, {failed} failed · nenhuma janela exibida");return failed>0?1:0;
     }
     static IEnumerable<T> Descendants<T>(DependencyObject obj) where T:DependencyObject
     {for(int i=0;i<VisualTreeHelper.GetChildrenCount(obj);i++){var child=VisualTreeHelper.GetChild(obj,i);if(child is T match)yield return match;foreach(var d in Descendants<T>(child))yield return d;}}
     sealed class EmptyHandler : HttpMessageHandler
-    {protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request,CancellationToken token)=>Task.FromResult(new HttpResponseMessage(System.Net.HttpStatusCode.ServiceUnavailable));}
+    {protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request,CancellationToken token){
+        if(request.RequestUri?.AbsolutePath=="/v1/br1/profile"){
+            var at=DateTimeOffset.UtcNow;
+            var account=new GameAccount("Teste#BR1",42,1,"BR1",[new("RANKED_SOLO_5x5","GOLD","II",55,34,28)],
+                [new(4,26,"CLASSIC",true,6,2,10,90,1500,at),new(3,63,"CLASSIC",false,3,5,12,48,1920,at.AddHours(-1)),
+                 new(2,235,"ARAM",true,8,4,24,53,1248,at.AddDays(-1)),new(1,103,"CLASSIC",false,7,6,9,164,1740,at.AddDays(-2))],
+                "Filas públicas compatíveis entre as cinco partidas mais recentes · Riot Games");
+            return Task.FromResult(new HttpResponseMessage(System.Net.HttpStatusCode.OK){Content=new StringContent(JsonSerializer.Serialize(account))});
+        }
+        return Task.FromResult(new HttpResponseMessage(System.Net.HttpStatusCode.ServiceUnavailable));
+    }}
     static double Contrast(Color a,Color b){static double L(Color c){static double S(byte v){double n=v/255.0;return n<=0.04045?n/12.92:Math.Pow((n+0.055)/1.055,2.4);}return 0.2126*S(c.R)+0.7152*S(c.G)+0.0722*S(c.B);}double x=L(a),y=L(b);return (Math.Max(x,y)+0.05)/(Math.Min(x,y)+0.05);}
 }

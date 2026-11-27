@@ -1,5 +1,5 @@
 param(
- [ValidatePattern('^\d+\.\d+\.\d+$')][string]$Version='0.7.3',
+ [ValidatePattern('^\d+\.\d+\.\d+$')][string]$Version='0.8.0',
  [string]$OutputDirectory,
  [switch]$Publish
 )

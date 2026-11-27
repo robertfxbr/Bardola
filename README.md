@@ -5,6 +5,8 @@ Companheiro independente para **League of Legends**, em português, sem Overwolf
 - Builds por campeão, modo, função, elo e patch, com fonte e amostra visíveis.
 - Importação automática de itens, runas e feitiços na seleção de campeão; Flash no D ou F e backup da página de runas reutilizada.
 - Perfil da conta ativa no cliente, ranques e histórico recente, sem pedir a senha do LoL.
+- Com o LoL fechado, **Meu perfil** mostra a última sincronização local. A API do Bardo.gg permite consultar um Riot ID do Brasil quando o servidor está configurado. [Executar a API de perfis](docs/api-perfis.md)
+- Na seleção do Rift, a aba **Partida** sugere opções por função, maestria e elo. As sugestões levam em conta os picks inimigos confirmados, as taxas históricas de confronto com amostra a partir de 100 jogos e os bans já realizados.
 - Arsenais locais por campeão e patch, com ordem de compra e variantes na loja. Em Ajustes, é possível adicionar arquivos JSON de arsenal do Blitz.
 - Tier das cartas do ARAM Desordem por campeão. O overlay reconhece títulos em inglês e português no modo sem bordas. A correspondência dos nomes usa o ID da carta nos catálogos do mesmo patch do CommunityDragon.
 - Placar com participação em abates e dano da equipe, dano mitigado e divisão de dano por tipo. O botão **Linha do tempo** abre os abates, estruturas e objetivos disponíveis no histórico.
@@ -35,6 +37,7 @@ dotnet run --project Tests/NexoLoL.Tests.csproj
 dotnet run --project ImportTests/NexoLoL.ImportTests.csproj
 dotnet run --project UiTests/NexoLoL.UiTests.csproj
 dotnet run --project UpdateTests/NexoLoL.UpdateTests.csproj
+dotnet run --project ApiTests/Bardo.ApiTests.csproj
 ```
 
 Os nomes internos `NexoLoL` são legados. Os testes WPF renderizam em memória, sem abrir janelas. Os testes de importação usam um cliente simulado; não escrevem em uma conta real. As opções `--live`/`--account-live` dos testes principais fazem consultas às fontes e ao cliente, sem escritas no jogo. `--native-timers-live` no projeto ImportTests é uma verificação intencional de escrita: ativa o modo avançado de cronômetros no cliente real. Não use essa opção para executar apenas testes simulados.

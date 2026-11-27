@@ -86,20 +86,34 @@ public partial class MainWindow
     }
     void RenderAccountV2()
     {
-        AccountDetails.Children.Clear();var top=new StackPanel();top.Children.Add(Text(account is null?"Conecte sua conta do LoL":account.RiotId,29,true));
-        top.Children.Add(Text(account is null?"Seu perfil, classificação e histórico. Use a sessão já aberta no cliente, sem digitar sua senha aqui.":$"Nível {account.Level}  ·  {account.Region}  ·  Perfil conectado ao cliente do LoL",13,false,Muted,top:8));
-        var buttons=new WrapPanel{Margin=new Thickness(0,16,0,0)};var connect=Button(accountBusy?"Conectando…":account is null?"Conectar conta do LoL":"Atualizar perfil",()=>_=ConnectAccount());connect.Name="ConnectAccountButton";connect.IsEnabled=!accountBusy;connect.Background=Brush("#3B3325");connect.Foreground=Accent;buttons.Children.Add(connect);if(account is not null || preferences.LinkAccount)buttons.Children.Add(Button("Desconectar",DisconnectAccount));top.Children.Add(buttons);if(accountMessage!="")top.Children.Add(Text(accountMessage,11,false,Brush("#88BBAF"),top:11));AccountDetails.Children.Add(Card(top));
-        if(account is null){AccountDetails.Children.Add(Card(Text("Abra o cliente do League of Legends, entre na sua conta e clique em Conectar conta do LoL. Para trocar de conta, troque a sessão no cliente e atualize o perfil.",14,false,Muted)));return;}
+        var saved=preferences.LinkAccount?preferences.SavedProfile:null;
+        var profile=publicProfile??account??saved;
+        var top=new StackPanel();
+        AccountDetails.Children.Clear();
+        top.Children.Add(Text(profile?.RiotId??"Perfil e histórico",29,true));
+        string source=publicProfile is not null?"Perfil público · API do Bardo.gg":account is not null?"Cliente do LoL":
+            $"Salvo neste PC · {preferences.ProfileSavedAt?.ToLocalTime():dd/MM/yyyy HH:mm}";
+        top.Children.Add(Text(profile is null?"Conecte a conta aberta no cliente ou consulte um Riot ID com o LoL fechado.":
+            $"Nível {profile.Level}  ·  {profile.Region}  ·  {source}",13,false,Muted,top:8));
+        var buttons=new WrapPanel{Margin=new Thickness(0,12,0,0)};
+        var connect=Button(accountBusy?"Conectando…":account is null?"Conectar conta do LoL":"Sincronizar conta local",()=>_=ConnectAccount());
+        connect.Name="ConnectAccountButton";connect.IsEnabled=!accountBusy;buttons.Children.Add(connect);
+        if(account is not null || preferences.LinkAccount)buttons.Children.Add(Button("Desconectar",DisconnectAccount));
+        top.Children.Add(buttons);
+        if(accountMessage!="" && publicProfile is null && (account is not null || saved is null))
+            top.Children.Add(Text(accountMessage,11,false,Muted,top:7));
+        AddProfileLookup(top);AccountDetails.Children.Add(Card(top));
+        if(profile is null)return;
         var layout=new Grid();layout.ColumnDefinitions.Add(new(){Width=new GridLength(250)});layout.ColumnDefinitions.Add(new(){Width=new GridLength(18)});layout.ColumnDefinitions.Add(new());
-        var ranks=new StackPanel();foreach(var rank in account.Ranks){var p=new StackPanel();p.Children.Add(Text(rank.Queue=="RANKED_SOLO_5x5"?"RANQUEADA SOLO / DUO":"RANQUEADA FLEX",10,true,Muted));p.Children.Add(Text(RankName(rank.Tier)+" "+rank.Division,25,true,Accent,top:12));p.Children.Add(Text($"{rank.Points} PdL   ·   {rank.Wins}V / {rank.Losses}D",12,false,Muted,top:8));ranks.Children.Add(Card(p));}if(account.Ranks.Count==0)ranks.Children.Add(Card(Text("Sem classificação disponibilizada pelo cliente.",13,false,Muted)));layout.Children.Add(ranks);
-        var history=new StackPanel();history.Children.Add(Text("Histórico recente",19,true));history.Children.Add(Text(account.HistoryMessage,11,false,Muted,top:6));
-        if(account.Matches.Count>0){int wins=account.Matches.Count(m=>m.Win);history.Children.Add(Text($"{wins} VITÓRIAS   /   {account.Matches.Count-wins} DERROTAS    ·    ÚLTIMAS {account.Matches.Count} PARTIDAS",11,true,Brush("#40CCB9"),top:15));
-            foreach(var match in account.Matches){var c=catalog.Champions.FirstOrDefault(c=>c.Id==match.ChampionId);var grid=new Grid();grid.ColumnDefinitions.Add(new(){Width=new GridLength(59)});grid.ColumnDefinitions.Add(new());grid.ColumnDefinitions.Add(new(){Width=new GridLength(120)});
+        var ranks=new StackPanel();foreach(var rank in profile.Ranks){var p=new StackPanel();p.Children.Add(Text(rank.Queue=="RANKED_SOLO_5x5"?"RANQUEADA SOLO / DUO":"RANQUEADA FLEX",10,true,Muted));p.Children.Add(Text(RankName(rank.Tier)+" "+rank.Division,25,true,Accent,top:12));p.Children.Add(Text($"{rank.Points} PdL   ·   {rank.Wins}V / {rank.Losses}D",12,false,Muted,top:8));ranks.Children.Add(Card(p));}if(profile.Ranks.Count==0)ranks.Children.Add(Card(Text("Sem classificação disponível.",13,false,Muted)));layout.Children.Add(ranks);
+        var history=new StackPanel();history.Children.Add(Text("Histórico recente",19,true));history.Children.Add(Text(profile.HistoryMessage,11,false,Muted,top:6));
+        if(profile.Matches.Count>0){int wins=profile.Matches.Count(m=>m.Win);history.Children.Add(Text($"{wins} VITÓRIAS   /   {profile.Matches.Count-wins} DERROTAS    ·    ÚLTIMAS {profile.Matches.Count} PARTIDAS",11,true,Brush("#40CCB9"),top:15));
+            foreach(var match in profile.Matches){var c=catalog.Champions.FirstOrDefault(c=>c.Id==match.ChampionId);var grid=new Grid();grid.ColumnDefinitions.Add(new(){Width=new GridLength(59)});grid.ColumnDefinitions.Add(new());grid.ColumnDefinitions.Add(new(){Width=new GridLength(120)});
                 var portrait=new Image{Width=45,Height=45,HorizontalAlignment=HorizontalAlignment.Left,VerticalAlignment=VerticalAlignment.Top};if(c is not null)LoadIcon(portrait,$"https://ddragon.leagueoflegends.com/cdn/{catalog.Version}/img/champion/{c.Key}.png",lifetime.Token);grid.Children.Add(portrait);
                 var body=new StackPanel();body.Children.Add(Text((match.Win?"Vitória":"Derrota")+"   ·   "+(c?.Name??"Campeão"),15,true,Brush(match.Win?"#3AD4C0":"#EB8977")));body.Children.Add(Text(ModeLabel(match.Mode)+"   ·   "+TimeSpan.FromSeconds(match.Duration).ToString(@"mm\:ss")+(match.At>DateTimeOffset.MinValue?"   ·   "+LocalTime(match.At):""),11,false,Muted,top:7));Grid.SetColumn(body,1);grid.Children.Add(body);
                 var stats=new StackPanel{HorizontalAlignment=HorizontalAlignment.Right};stats.Children.Add(Text($"{match.Kills}/{match.Deaths}/{match.Assists}",20,true));stats.Children.Add(Text($"{match.Cs} CS",11,false,Muted,top:7));Grid.SetColumn(stats,2);grid.Children.Add(stats);
                 var card=Card(grid);card.Margin=new Thickness(0,12,0,0);card.Background=Brush(match.Win?"#172326":"#271E22");card.BorderBrush=Brush(match.Win?"#26413E":"#49302E");history.Children.Add(card);
             }
-        }else history.Children.Add(Card(Text("O cliente não disponibilizou partidas agora. As builds e a importação automática continuam disponíveis.",13,false,Muted)));Grid.SetColumn(history,2);layout.Children.Add(history);AccountDetails.Children.Add(layout);
+        }else history.Children.Add(Card(Text("Nenhuma partida disponível nesta consulta.",13,false,Muted)));Grid.SetColumn(history,2);layout.Children.Add(history);AccountDetails.Children.Add(layout);
     }
 }

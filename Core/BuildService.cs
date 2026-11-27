@@ -8,7 +8,7 @@ public sealed class BuildService(string directory, Func<BuildQuery,CancellationT
 {
     public static readonly TimeSpan FreshFor=TimeSpan.FromHours(6);
     public static readonly TimeSpan KeepFor=TimeSpan.FromDays(7);
-    public async Task<BuildResult> GetAsync(BuildQuery query,bool refresh=false,CancellationToken ct=default,bool requireSpells=false)
+    public async Task<BuildResult> GetAsync(BuildQuery query,bool refresh=false,CancellationToken ct=default,bool requireSpells=false,bool requireMatchups=false)
     {
         string name=Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes("schema2:"+query.CacheKey)))+".json";
         string path=Path.Combine(directory,name);
@@ -21,7 +21,7 @@ public sealed class BuildService(string directory, Func<BuildQuery,CancellationT
                     d.FetchedAt<=DateTimeOffset.UtcNow.AddMinutes(5) && DateTimeOffset.UtcNow-d.FetchedAt<KeepFor)cached=d;
             }
         }catch(Exception e) when(e is IOException or JsonException or UnauthorizedAccessException or NullReferenceException) { /* Cache inválido não bloqueia a rede. */ }
-        if(!refresh && cached is not null && (query.Mode!=GameMode.Mayhem || cached.AugmentTiers is not null) && DateTimeOffset.UtcNow-cached.FetchedAt<FreshFor && (!requireSpells || cached.Variants.All(v=>v.SummonerSpells is {Count:2})))
+        if(!refresh && cached is not null && (!requireMatchups || cached.DraftMatchups!=null) && (query.Mode!=GameMode.Mayhem || cached.AugmentTiers is not null) && DateTimeOffset.UtcNow-cached.FetchedAt<FreshFor && (!requireSpells || cached.Variants.All(v=>v.SummonerSpells is {Count:2})))
             return new(cached,true,false,"Cache recente · mesmo campeão, modo e patch");
         try {
             string html=await fetch(query,ct);

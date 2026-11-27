@@ -51,7 +51,7 @@ public static class BuildParsers
             if(candidates.Count!=1) throw new InvalidDataException("Não foi possível identificar uma build única na fonte.");
             // Resolver apenas header/summary: não percorrer grafo de runtime da página.
             var selected=new JsonObject();
-            foreach(var p in candidates[0].EnumerateObject().Where(p=>p.Name is "header" or "summary")) {
+            foreach(var p in candidates[0].EnumerateObject().Where(p=>p.Name is "header" or "summary" || query.Mode==GameMode.Rift && p.Name is ("enemy" or "enemy_h"))) {
                 int idx=Base36(p.Value.GetString()!);selected[p.Name]=Resolve(pool[idx]);
             }
             var header=selected["header"]!;string patch=S(header["patch"]),role=S(header["lane"]);
@@ -84,10 +84,31 @@ public static class BuildParsers
             }
             if(variants.Count==0) throw new InvalidDataException("Sem recomendações disponíveis para este contexto.");
             return new(query,patch,"LoLalytics",Url(query),DateTimeOffset.UtcNow,variants,D(header["wr"]),I(header["n"]),role,Ids(header["counters"]?["strong"]),Ids(header["counters"]?["weak"]),
-                Note:"Estatísticas agregadas da fonte. Vitórias de itens tardios sofrem viés de partidas longas; compare também a amostra.");
+                Note:"Estatísticas agregadas da fonte. Vitórias de itens tardios sofrem viés de partidas longas; compare também a amostra.",
+                DraftMatchups:ReadDraftMatchups(selected));
         } catch(InvalidDataException) {throw;} catch(Exception e) when(e is JsonException or InvalidOperationException or KeyNotFoundException or FormatException or OverflowException or ArgumentOutOfRangeException) {
             throw new InvalidDataException("Não foi possível validar os dados da página. Nenhuma build foi substituída.",e);
         }
+    }
+
+    static List<DraftMatchup> ReadDraftMatchups(JsonObject data)
+    {
+        if(data["enemy"] is not JsonObject lanes || data["enemy_h"] is not JsonArray header)return [];
+        var columns=header.Select(S).ToList();
+        int id=columns.IndexOf("id"),wr=columns.IndexOf("wr"),n=columns.IndexOf("n");
+        if(id<0 || wr<0 || n<0)return [];
+        var rows=new List<DraftMatchup>();
+        foreach(string role in new[]{"top","jungle","middle","bottom","support"}){
+            if(lanes[role] is not JsonArray table)continue;
+            foreach(var row in table.OfType<JsonArray>()){
+                if(row.Count<=Math.Max(id,Math.Max(wr,n)))continue;
+                int champion=I(row[id]),games=I(row[n]);
+                if(champion>0 && games>0 && D(row[wr]) is double rate && rate is >=0 and <=100)
+                    rows.Add(new(champion,rate,games));
+            }
+        }
+        return rows.GroupBy(m=>m.Champion).Select(g=>new DraftMatchup(g.Key,
+            g.Sum(m=>m.WinRate*m.Games)/g.Sum(m=>m.Games),g.Sum(m=>m.Games))).ToList();
     }
 
     public static BuildDocument ParseMayhem(string html, BuildQuery query)

@@ -33,15 +33,17 @@ public sealed class GameService : IDisposable
                 string root=$"https://127.0.0.1:{port}";
                 var phase=await Get(root+"/lol-gameflow/v1/gameflow-phase",auth,ct);
                 string phaseName=Text(phase);int champion=0;string mode="",role="default";int map=0;
+                DraftSession? draft=null;
                 if(phaseName=="ChampSelect") {
                     var session=await Get(root+"/lol-champ-select/v1/session",auth,ct);
+                    if(session!=null)draft=DraftSession.Read(session);
                     var self=(session?["myTeam"] as JsonArray)?.FirstOrDefault(p=>Int(p?["cellId"])==Int(session?["localPlayerCellId"]));
                     champion=Int(self?["championId"]);role=ClientImporter.NormalizeRole(Text(self?["assignedPosition"]));
                 }
                 var flow=await Get(root+"/lol-gameflow/v1/session",auth,ct);mode=Text(flow?["gameData"]?["gameMode"]);
                 int queue=Int(flow?["gameData"]?["queue"]?["id"]);map=Int(flow?["gameData"]?["map"]?["id"]);
                 if(queue==2400)mode="KIWI";else if(queue is 450 or 2400 || map==12)mode=queue==2400?"KIWI":"ARAM";else if(queue is 400 or 420 or 430 or 440 or 490)mode="CLASSIC";
-                return new(true,phaseName switch {"ChampSelect"=>"Seleção de campeão","Lobby"=>"Saguão","Matchmaking"=>"Buscando partida","ReadyCheck"=>"Confirmação de partida","None"=>"Cliente aberto","EndOfGame"=>"Fim de partida",_=>phaseName},champion,mode,Role:role,Map:map);
+                return new(true,phaseName switch {"ChampSelect"=>"Seleção de campeão","Lobby"=>"Saguão","Matchmaking"=>"Buscando partida","ReadyCheck"=>"Confirmação de partida","None"=>"Cliente aberto","EndOfGame"=>"Fim de partida",_=>phaseName},champion,mode,Role:role,Map:map,Draft:draft);
             }catch(Exception e) when(e is IOException or HttpRequestException or TaskCanceledException or System.Text.Json.JsonException or InvalidOperationException) {if(ct.IsCancellationRequested)throw;}
         }
         return new(false,"Aguardando o LoL",Message:"Abra o cliente para detecção automática. A busca manual de builds continua disponível.");

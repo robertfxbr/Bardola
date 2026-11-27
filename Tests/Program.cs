@@ -163,6 +163,26 @@ Test("cartas traduzidas usam o mesmo ID e descartam títulos ambíguos",()=>{
         """[{"id":41,"nameTRA":"Igual"},{"id":53,"nameTRA":"Cientista Louco"},{"id":40,"nameTRA":"Igual"},{"id":100,"nameTRA":"Sem par"}]""");
     Equal(1,names.Count);Equal("Mad Scientist",names["Cientista Louco"]);
 });
+Test("draft considera só escolhas confirmadas, exclui indisponíveis e preserva intenção aliada no ban",()=>{
+    var json=System.Text.Json.Nodes.JsonNode.Parse("""{"gameId":10,"myTeam":[{"championPickIntent":40}],"actions":[[{"type":"pick","completed":true,"championId":99,"isAllyAction":false},{"type":"pick","completed":false,"championId":17,"isAllyAction":false},{"type":"ban","championId":53,"completed":true},{"type":"pick","championId":14,"completed":true,"isAllyAction":true}]]}""");
+    var session=DraftSession.Read(json!);
+    True(session.Enemies.SequenceEqual(new[]{99}));
+    var strong=new BuildDocument(q,"16.23","LoLalytics","",DateTimeOffset.UtcNow,[],50,500,WeakAgainst:[40,53,43],DraftMatchups:[new(99,55,800)]);
+    DraftPick[] pool=[new(63,90000,11,strong),new(235,95000,11,strong with{DraftMatchups=[new(99,46,800)]}),new(53,200000,18),new(14,80000,10)];
+    True(DraftAdvice.Available(pool,session).Select(x=>x.Champion).SequenceEqual(new[]{63,235}));
+    True(DraftAdvice.Available(pool,session with{Enemies=[]})[0].Champion==235);
+    True(DraftAdvice.BanOptions(pool,session).SequenceEqual(new[]{43}));
+});
+Test("draft usa a função, maestria e lista de picks do cliente",()=>{
+    var roles=System.Text.Json.Nodes.JsonNode.Parse("""{"63":{"recommendedPositions":["UTILITY","MIDDLE"]},"51":{"recommendedPositions":["BOTTOM"]},"53":{"recommendedPositions":["UTILITY"]}}""");
+    var mastery=System.Text.Json.Nodes.JsonNode.Parse("""[{"championId":63,"championLevel":11,"championPoints":93000}]""");
+    var picks=DraftAdvice.Pool(roles,mastery,System.Text.Json.Nodes.JsonNode.Parse("[63,51]"),"support");
+    True(picks.Length==1 && picks[0] is {Champion:63,Level:11,Points:93000});
+});
+if(Array.IndexOf(args,"--draft-page") is int page && page>=0)Test("página real de Brand valida elo, função, patch, counters e amostras",()=>{
+    var meta=BuildParsers.ParseLolalytics(File.ReadAllText(args[page+1]),new(63,"brand",GameMode.Rift,"support","gold","16.23"));
+    True(meta.Games>0 && meta.StrongAgainst?.Count>0 && meta.DraftMatchups?.Any(m=>m.Games>=100 && m.Champion==103)==true);
+});
 Console.WriteLine($"\n{passed} passed, {failed} failed");
 Environment.ExitCode=failed>0?1:0;
 

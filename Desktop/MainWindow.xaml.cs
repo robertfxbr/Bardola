@@ -76,6 +76,7 @@ public partial class MainWindow : Window
             snapshot=await game.PollAsync(catalog,lifetime.Token);UpdateConnection();
             if(AutoDetect.IsChecked==true)ApplyDetection(true);
             ready=true;UpdateModeControls();SetNav(BuildNav);BuildResearch();RenderAccount();pollTimer.Start();if(!relicPoll.IsEnabled)StartRelicPolling();if(!cardPoll.IsEnabled)StartCardReader();StartUpdates();
+            UpdateDraft();
             if(preferences.LinkAccount)_=ConnectAccount();
             await LoadBuild();
         }catch(OperationCanceledException) {}
@@ -204,6 +205,7 @@ public partial class MainWindow : Window
                 try{await Storage.WriteAsync(Path.Combine(dataRoot,"sessions.json"),JsonSerializer.Serialize(sessions),lifetime.Token);}catch(IOException) {}
             }
             snapshot=next;UpdateConnection();UpdateTimerClock();UpdateOverlay();_=ApplyNativeTimerPreference();if(AutoDetect.IsChecked==true)ApplyDetection();
+            UpdateDraft();
             await UpdateFinalScore();
             if(importBusy && activeImportSelection is { } importing && (next.Phase!="Seleção de campeão" || next.ChampionId!=importing.ChampionId || GameService.DetectMode(next.Mode)!=importing.Mode))importRequest?.Cancel();
             _=RunAutoImport();
@@ -239,6 +241,7 @@ public partial class MainWindow : Window
     {if(!ready)return;ApplyDetection(true);_=SavePreferences();}
     void RenderGame()
     {
+        if(InDraft){RenderDraft();return;}
         var recap=snapshot.Connected && snapshot.GameTime<=0 ? finalScore ?? (snapshot.Phase=="Fim de partida"?null:account?.Matches.FirstOrDefault()) : null;
         if(recap is not null){
             if(ReferenceEquals(recap,renderedScore))return;
@@ -292,7 +295,9 @@ public partial class MainWindow : Window
         try {
             var linked=await accountService.ConnectAsync(token);
             if(token.IsCancellationRequested || generation!=accountGeneration)return;
-            account=linked;preferences.LinkAccount=true;accountMessage="Conectada à sessão local do LoL. Atualização automática enquanto o app estiver aberto.";
+            account=linked;preferences.LinkAccount=true;
+            preferences.SavedProfile=linked with{Matches=linked.Matches.Select(m=>m with{Teams=null}).ToList()};
+            preferences.ProfileSavedAt=DateTimeOffset.UtcNow;accountMessage="Conectada à sessão local do LoL. Atualização automática enquanto o app estiver aberto.";
             AccountBadge.Text=linked.RiotId;await SavePreferences();
         }catch(OperationCanceledException) when(token.IsCancellationRequested) {}
         catch(Exception e) when(e is IOException or InvalidDataException or HttpRequestException or OperationCanceledException or JsonException) {
@@ -303,7 +308,8 @@ public partial class MainWindow : Window
     }
     void DisconnectAccount()
     {
-        ++accountGeneration;accountRequest?.Cancel();accountBusy=false;account=null;preferences.LinkAccount=false;AccountBadge.Text="Ainda não conectada";
+        ++accountGeneration;accountRequest?.Cancel();accountBusy=false;account=null;preferences.LinkAccount=false;
+        ClearPublicProfile();preferences.SavedProfile=null;preferences.ProfileSavedAt=null;AccountBadge.Text="Ainda não conectada";
         accountMessage="Conta desconectada do Bardo.gg. Sua sessão no LoL continua aberta.";_=SavePreferences();RenderAccount();
     }
     void RenderAccount()=>RenderAccountV2();
@@ -346,7 +352,7 @@ public partial class MainWindow : Window
     void ShowGame(object sender,RoutedEventArgs e){ShowPage(GamePage,GameNav,"Partida","LEAGUE OF LEGENDS");RenderGame();}
     void ShowSaved(object sender,RoutedEventArgs e){ShowPage(SavedPage,SavedNav,"Seu repertório.","CAMPEÕES FAVORITOS");RenderSaved();}
     void ShowResearch(object sender,RoutedEventArgs e){BuildResearch();ShowPage(ResearchPage,ResearchNav,"Configurações","PREFERÊNCIAS DO BARDO.GG");}
-    void ShowAccount(object sender,RoutedEventArgs e){ShowPage(AccountPage,AccountNav,"Sua conta do League.","PERFIL CONECTADO AO CLIENTE");RenderAccount();}
+    void ShowAccount(object sender,RoutedEventArgs e){ShowPage(AccountPage,AccountNav,"Perfil e histórico","LEAGUE OF LEGENDS");RenderAccount();}
     void OnClosed(object? sender,EventArgs e)
     {ready=false;cardPoll.Stop();cardOverlay?.Close();relicPoll.Stop();ClearRelicReadings();mapOverlay?.Close();calibrationWindow?.Close();pollTimer.Stop();selectionTimer.Stop();updateTimer.Stop();lifetime.Cancel();nativeTimerRequest?.Cancel();overlay?.Close();request?.Cancel();accountRequest?.Cancel();importRequest?.Cancel();compact?.Close();remote.Dispose();game.Dispose();lifetime.Dispose();}
 
@@ -388,6 +394,8 @@ public sealed class Preferences
     public BuildQuery? Last {get;set;}
     public bool AutoDetect {get;set;}=true;
     public bool LinkAccount {get;set;}
+    public GameAccount? SavedProfile {get;set;}
+    public DateTimeOffset? ProfileSavedAt {get;set;}
     public bool AutoImportItems {get;set;}=true;
     public bool AutoImportRunes {get;set;}=true;
     public bool ReuseActiveRunePage {get;set;}=true;
