@@ -18,7 +18,7 @@ public partial class App : Application
             MessageBox.Show("Feche o Bardola e abra pelo atalho para usar a atualização.","Bardola");
         if(!ownsMutex){Shutdown();return;}
         if (Environment.ProcessPath?.StartsWith(Path.Combine(BardoPaths.Root,"app-versions")+Path.DirectorySeparatorChar,StringComparison.OrdinalIgnoreCase)==true)
-            BardolaShortcuts.Update(File.Exists(BardoPaths.Launcher)?BardoPaths.Launcher:Path.Combine(BardoPaths.Root,"Bardo.gg.exe"),migrateOnly:true);
+            BardolaShortcuts.Update(File.Exists(BardoPaths.Launcher)?BardoPaths.Launcher:Path.Combine(BardoPaths.Root,"Bardo.gg.exe"),Environment.ProcessPath!,existingOnly:true);
         base.OnStartup(e);
     }
     protected override void OnExit(ExitEventArgs e){if(ownsMutex)instanceMutex?.ReleaseMutex();instanceMutex?.Dispose();base.OnExit(e);}

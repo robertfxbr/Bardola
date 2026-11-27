@@ -37,12 +37,12 @@ try{
             }
         }finally{Directory.Delete(scratch,true);}
     }
-    manager.Executable(); // Instalação só informa sucesso depois de validar o executável.
+    var installedExecutable=manager.Executable();
     BardoPaths.MigrateLegacyData(root);
     if(installing){
         string staged=launcher+".new";File.Copy(self,staged,true);File.Move(staged,launcher,true);
     }
-    if(Arg("--root") is null)BardolaShortcuts.Update(launcher);
+    if(Arg("--root") is null)BardolaShortcuts.Update(launcher,installedExecutable);
     await File.WriteAllTextAsync(log,JsonSerializer.Serialize(new{installed=true,version=manager.Current()?.Version,launcher}));
     if(args.Contains("--install-only"))return 0;
     string executable;

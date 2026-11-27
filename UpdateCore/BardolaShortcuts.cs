@@ -6,7 +6,10 @@ namespace NexoLoL.Updates;
 [SupportedOSPlatform("windows")]
 public static class BardolaShortcuts
 {
-    public static void Update(string launcher,bool migrateOnly=false)
+    [DllImport("shell32.dll", CharSet=CharSet.Unicode, ExactSpelling=true)]
+    static extern void SHChangeNotify(int eventId,uint flags,string path,IntPtr unused);
+
+    public static void Update(string launcher,string iconExecutable,bool existingOnly=false)
     {
         if (!File.Exists(launcher)) return;
         string legacyLauncher=Path.Combine(BardoPaths.Root,"Bardo.gg.exe");
@@ -15,7 +18,8 @@ public static class BardolaShortcuts
             string folder=Environment.GetFolderPath(location);
             if (string.IsNullOrEmpty(folder)) continue;
             string oldPath=Path.Combine(folder,"Bardo.gg.lnk"),newPath=Path.Combine(folder,"Bardola.lnk");
-            if (migrateOnly && !File.Exists(oldPath)) continue;
+            bool hasShortcut=File.Exists(newPath);
+            if (existingOnly && !hasShortcut && !File.Exists(oldPath)) continue;
             dynamic? shell=null,link=null,old=null;
             try
             {
@@ -29,14 +33,21 @@ public static class BardolaShortcuts
                     old=shell.CreateShortcut(oldPath);
                     ownsOld=string.Equals((string)old.TargetPath,legacyLauncher,StringComparison.OrdinalIgnoreCase);
                 }
-                if (migrateOnly && !ownsOld) continue;
+                if (existingOnly && !hasShortcut && !ownsOld) continue;
                 link=shell.CreateShortcut(newPath);
-                if (File.Exists(newPath) && !string.Equals((string)link.TargetPath,launcher,StringComparison.OrdinalIgnoreCase)
+                if (hasShortcut && !string.Equals((string)link.TargetPath,launcher,StringComparison.OrdinalIgnoreCase)
                     && !string.Equals((string)link.TargetPath,legacyLauncher,StringComparison.OrdinalIgnoreCase)) continue;
-                link.TargetPath=launcher;
-                link.WorkingDirectory=Path.GetDirectoryName(launcher);
-                link.Description="Bardola · League of Legends";
-                link.Save();
+                string icon=iconExecutable+",0";
+                if (!hasShortcut || !string.Equals((string)link.TargetPath,launcher,StringComparison.OrdinalIgnoreCase)
+                    || !string.Equals((string)link.IconLocation,icon,StringComparison.OrdinalIgnoreCase))
+                {
+                    link.TargetPath=launcher;
+                    link.IconLocation=icon;
+                    link.WorkingDirectory=Path.GetDirectoryName(launcher);
+                    link.Description="Bardola · League of Legends";
+                    link.Save();
+                    SHChangeNotify(0x2000,0x5,newPath,IntPtr.Zero); // SHCNE_UPDATEITEM, SHCNF_PATHW
+                }
                 if (ownsOld) File.Delete(oldPath);
             }
             catch (Exception e) when (e is COMException or IOException or UnauthorizedAccessException) { }
