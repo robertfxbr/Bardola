@@ -12,7 +12,9 @@ public partial class MainWindow
         if(current is null)return;
         var doc=current.Document;var v=doc.Variants[variantIndex];BuildDetails.Children.Clear();RunePanel.Children.Clear();MatchupPanel.Children.Clear();SourcePanel.Children.Clear();
         for(int i=0;i<VariantButtons.Children.Count;i++)if(VariantButtons.Children[i] is Button b){b.Background=i==variantIndex?Brush("#3B3224"):Brush("#1B2029");b.BorderBrush=i==variantIndex?Brush("#A98A53"):Brush("#333A47");b.Foreground=i==variantIndex?Accent:Muted;b.Padding=new Thickness(13,8,13,8);}
-        var corePanel=ItemContent("Itens principais",v.Core,true);
+        if(v.PurchaseOrder is {Count:>0} order)BuildDetails.Children.Add(Card(ItemContent("Ordem de compra",order,true)));
+        var corePanel=ItemContent(v.PurchaseOrder is null?"Itens principais":"Build final",v.Core,true);
+        if(v.ArsenalSource is not null)corePanel.Children.Add(Text(v.ArsenalSource+" · "+v.Name,12,false,Accent,top:8));
         if(v.Games>0)corePanel.Children.Insert(1,Text($"{v.WinRate:0.0}% de vitórias   ·   {v.Games.ToString("N0",Pt)} jogos com este núcleo",11,false,Brush("#8ECABE"),top:6));
         BuildDetails.Children.Add(Card(corePanel));
         var preparation=new Grid();preparation.ColumnDefinitions.Add(new());preparation.ColumnDefinitions.Add(new(){Width=new GridLength(12)});preparation.ColumnDefinitions.Add(new());
@@ -21,6 +23,7 @@ public partial class MainWindow
         else if(v.SkillPriority!=""){var skill=Card(SkillContent(v));Grid.SetColumn(skill,2);preparation.Children.Add(skill);}
         BuildDetails.Children.Add(preparation);
         if(v.Alternatives.Count>0)BuildDetails.Children.Add(Card(ItemContent("Escolhas situacionais",v.Alternatives)));
+        if(v.FrequentItems is {Count:>0} frequent)BuildDetails.Children.Add(Card(ItemContent("Mais comprados",frequent)));
         var runes=new StackPanel();runes.Children.Add(Text("Página de runas",17,true));
         if(v.Runes is { } page) {
             runes.Children.Add(Text(RuneName(page.PrimaryStyle)+"  +  "+RuneName(page.SecondaryStyle),12,false,Accent,top:6));
@@ -41,7 +44,7 @@ public partial class MainWindow
         RunePanel.Children.Add(Card(spells));
         RunePanel.Children.Add(Card(runes));
         if(v.Boots?.Count>0 && v.SkillPriority!="")RunePanel.Children.Add(Card(SkillContent(v)));
-        if(doc.Augments?.Count>0){var a=new StackPanel();a.Children.Add(Text("Aumentos em destaque",16,true));var rows=new WrapPanel{Margin=new Thickness(0,12,0,0)};foreach(string name in doc.Augments)rows.Children.Add(Badge(name));a.Children.Add(rows);a.Children.Add(Text("Nomes da fonte em inglês · sem taxas de vitória",10,false,Muted,top:7));MatchupPanel.Children.Add(Card(a));}
+        if(doc.Augments?.Count>0){var a=new StackPanel();a.Children.Add(Text("Aprimoramentos em destaque",16,true));var rows=new WrapPanel{Margin=new Thickness(0,12,0,0)};foreach(string name in doc.Augments){var grade=doc.AugmentTiers?.GetValueOrDefault(name);rows.Children.Add(Badge(grade is null?name:$"{grade}  ·  {name}"));}a.Children.Add(rows);a.Children.Add(Text(doc.Source+" · "+doc.Query.Slug+" · patch "+doc.Patch,10,false,Muted,top:7));MatchupPanel.Children.Add(Card(a));}
         if(doc.StrongAgainst?.Count>0 || doc.WeakAgainst?.Count>0){var p=new StackPanel();p.Children.Add(Text("Matchups do campeão",16,true));var grid=new Grid();grid.ColumnDefinitions.Add(new());grid.ColumnDefinitions.Add(new());var strong=new StackPanel();CounterList(strong,"Favoráveis",doc.StrongAgainst??[]);grid.Children.Add(strong);var weak=new StackPanel();CounterList(weak,"Atenção contra",doc.WeakAgainst??[]);Grid.SetColumn(weak,1);grid.Children.Add(weak);p.Children.Add(grid);MatchupPanel.Children.Add(Card(p));}
         var source=new StackPanel();source.Children.Add(Text(doc.Source+"  ·  patch "+doc.Patch,12,true,Accent));
         source.Children.Add(Text("Consulta: "+LocalTime(doc.FetchedAt)+"  ·  "+(doc.Query.Mode==GameMode.Rift?RoleName(doc.Role)+" / "+TierName(doc.Query.Tier):ModeName(doc.Query.Mode)),11,false,Muted,top:7));

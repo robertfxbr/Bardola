@@ -110,6 +110,8 @@ public static class BuildParsers
         var start=ItemImages(Section("Start"));var core=ItemImages(Section("Core items, in buying order"));
         var boots=ItemImages(Regex.Match(Section("Core items, in buying order",false),"<table\\b.*?</table>",RegexOptions.Singleline|RegexOptions.IgnoreCase).Value);
         var alternatives=ItemImages(Section("Situational, after the core")).Where(x=>!core.Any(c=>c.Id==x.Id)).ToList();
+        var frequentSection=Regex.Match(visible,@"<h3\b[^>]*>Most bought items</h3>(.*?)(?=<h[234]\b|$)",RegexOptions.Singleline|RegexOptions.IgnoreCase).Groups[1].Value;
+        var frequent=ItemImages(Regex.Match(frequentSection,@"<ol\b[^>]*>(.*?)</ol>",RegexOptions.Singleline|RegexOptions.IgnoreCase).Groups[1].Value);
         if(core.Count<2 || start.Count==0) throw new InvalidDataException("Não foi possível validar os itens desta build de Desordem.");
         string clean=Clean(visible);
         string priority=Regex.Match(clean,@"Max\s+([QWE])\s*\([^)]*\)\s*first,\s*then\s*([QWE]),\s*then\s*([QWE])",RegexOptions.IgnoreCase) is {Success:true} sk ? string.Concat(sk.Groups[1].Value,sk.Groups[2].Value,sk.Groups[3].Value) : "";
@@ -122,8 +124,28 @@ public static class BuildParsers
         var firstPair=Regex.Match(spellSection,@"<li\b[^>]*>(.*?)</li>",RegexOptions.Singleline|RegexOptions.IgnoreCase).Groups[1].Value;
         var spells=Regex.Matches(firstPair,@"/img/spell/(Summoner[A-Za-z]+)\.png",RegexOptions.IgnoreCase).Select(m=>SpellRules.Id(m.Groups[1].Value)).ToList();
         string? date=Regex.Match(html,"\"dateModified\":\"([^\"]+)\"") is {Success:true} dt?dt.Groups[1].Value:null;
-        return new(query,patch,"LazyElo / ARAMKit",expected,DateTimeOffset.UtcNow,[new("Caminho principal de Desordem",start,core,alternatives,priority,Boots:boots,SummonerSpells:spells)],
-            Augments:cards,Note:"Desordem desativa runas. Fonte específica deste modo; aumentos exibidos sem taxas de vitória.",SourceDate:date);
+        return new(query,patch,"LazyElo / ARAMKit",expected,DateTimeOffset.UtcNow,[new("Caminho principal de Desordem",start,core,alternatives,priority,Boots:boots,SummonerSpells:spells,FrequentItems:frequent)],
+            Augments:cards,Note:"Desordem desativa runas. Fonte específica deste modo; aumentos exibidos sem taxas de vitória.",SourceDate:date,
+            AugmentTiers:ReadAugmentTiers(cardsSection));
+    }
+
+    static Dictionary<string,string> ReadAugmentTiers(string section)
+    {
+        const string cardLink = """<a\b[^>]*href="/aram-mayhem/augments/[^"/]+"[^>]*>(.*?)</a>""";
+        const string tier = @"<span\b[^>]*>\s*Tier\s*</span>\s*([SABCD])\s*</span>";
+        var tiers = new Dictionary<string,string>(StringComparer.OrdinalIgnoreCase);
+        foreach (Match row in Regex.Matches(section, @"<tr\b[^>]*>(.*?)</tr>", RegexOptions.Singleline)) {
+            var link = Regex.Match(row.Value, cardLink, RegexOptions.Singleline);
+            var grade = Regex.Match(row.Value, tier);
+            if (link.Success && grade.Success)
+                tiers[Clean(link.Groups[1].Value)] = grade.Groups[1].Value;
+        }
+        // Lower tiers are grouped under one heading per list instead of one row per card.
+        string group = tier + @"\s*<p\b[^>]*>(?:(?!</p>).)*</p>\s*</div>\s*<ul\b[^>]*>(.*?)</ul>";
+        foreach (Match list in Regex.Matches(section, group, RegexOptions.Singleline))
+            foreach (Match link in Regex.Matches(list.Groups[2].Value, cardLink, RegexOptions.Singleline))
+                tiers[Clean(link.Groups[1].Value)] = list.Groups[1].Value;
+        return tiers;
     }
 
     static int Base36(string text) {int n=0;foreach(char c in text)n=checked(n*36+(c<='9'?c-'0':c-'a'+10));return n;}

@@ -3,7 +3,8 @@ using System.Text.Json.Nodes;
 namespace NexoLoL.Core;
 
 public record AccountRank(string Queue,string Tier,string Division,int Points,int Wins,int Losses);
-public record AccountMatch(long Id,int ChampionId,string Mode,bool Win,int Kills,int Deaths,int Assists,int Cs,int Duration,DateTimeOffset At);
+public record AccountMatch(long Id,int ChampionId,string Mode,bool Win,int Kills,int Deaths,int Assists,int Cs,int Duration,DateTimeOffset At,
+    int? ChampionDamage=null,int? DamageTaken=null,int? AllyHealingAndShielding=null,List<int>? Items=null,List<ScoreTeam>? Teams=null);
 public record GameAccount(string RiotId,int Level,int IconId,string Region,List<AccountRank> Ranks,List<AccountMatch> Matches,string HistoryMessage="");
 
 public static class AccountParser
@@ -35,7 +36,10 @@ public static class AccountParser
             DateTimeOffset at=DateTimeOffset.MinValue;long timestamp=N(m["gameCreation"]);
             if(timestamp>0 && timestamp<253402300799000)at=DateTimeOffset.FromUnixTimeMilliseconds(timestamp);
             matches.Add(new(N(m["gameId"]),(int)N(self["championId"]),S(m["gameMode"]),S(stats["win"]).Equals("true",StringComparison.OrdinalIgnoreCase),
-                (int)N(stats["kills"]),(int)N(stats["deaths"]),(int)N(stats["assists"]),(int)(N(stats["totalMinionsKilled"])+N(stats["neutralMinionsKilled"])),(int)N(m["gameDuration"]),at));
+                (int)N(stats["kills"]),(int)N(stats["deaths"]),(int)N(stats["assists"]),(int)(N(stats["totalMinionsKilled"])+N(stats["neutralMinionsKilled"])),(int)N(m["gameDuration"]),at,
+                FinalScore.Number(stats["totalDamageDealtToChampions"]),FinalScore.Number(stats["totalDamageTaken"]),
+                FinalScore.Number(stats["totalHealsOnTeammates"]??stats["totalHealOnTeammates"])+FinalScore.Number(stats["totalDamageShieldedOnTeammates"]),
+                Enumerable.Range(0,7).Select(i=>(int)N(stats["item"+i])).Where(id=>id>0).ToList()));
         }
         return new(name+(tag!=""?"#"+tag:""),(int)N(profile["summonerLevel"]),(int)N(profile["profileIconId"]),S(region?["region"]),ranks,matches.Take(20).ToList());
     }
@@ -57,9 +61,15 @@ public sealed class AccountService
         string puuid=profile["puuid"]?.ToString()??"";
         var historyTask=puuid!=""?Optional("/lol-match-history/v1/products/lol/"+Uri.EscapeDataString(puuid)+"/matches?begIndex=0&endIndex=19"):Task.FromResult<JsonNode?>(null);
         await Task.WhenAll(rankedTask,regionTask,historyTask);
+        var account=AccountParser.Parse(profile,rankedTask.Result,regionTask.Result,historyTask.Result);
+        if(account.Matches.FirstOrDefault() is { } recent){
+            var full=await Optional($"/lol-match-history/v1/games/{recent.Id}");
+            var teams=MatchRoster.FromHistory(full,puuid,recent.Id);
+            if(teams.Count>0)account.Matches[0]=recent with{Teams=teams};
+        }
         var latest=await client.GetAsync("/lol-summoner/v1/current-summoner",ct)??throw new InvalidDataException("A sessão do LoL foi encerrada durante a consulta.");
         AccountParser.AssertSameAccount(profile,latest);
-        return AccountParser.Parse(profile,rankedTask.Result,regionTask.Result,historyTask.Result) with {
+        return account with {
             HistoryMessage=historyTask.Result is null?"O cliente não forneceu histórico nesta consulta. Seu perfil continua conectado; tente atualizar depois.":"Histórico fornecido pelo cliente do LoL · até 20 partidas."
         };
     }

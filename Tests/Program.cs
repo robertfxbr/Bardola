@@ -81,6 +81,26 @@ AsyncTest("resposta maior que limite não entra no parser",async()=>{
     try{await remote.BytesAsync("https://example.test/data",100);}catch(InvalidDataException){return;}
     throw new Exception("resposta grande foi aceita");
 });
+if(Array.IndexOf(args,"--captured-shen") is int fixture && fixture>=0) {
+    var capture=BuildParsers.ParseMayhem(File.ReadAllText(args[fixture+1]),new(98,"shen",GameMode.Mayhem,Patch:"16.23"));
+    Test("Shen: notas por campeão no HTML publicado e dez itens mais comprados",()=>{
+        True(capture.AugmentTiers!.Count>=150);Equal("D",capture.AugmentTiers["Empowered By The Faithful"]);
+        Equal("S",capture.AugmentTiers["Mad Scientist"]);Equal(10,capture.Variants[0].FrequentItems!.Count);
+    });
+    Test("Shen: dois arsenais salvos conservam ordem de compra, itens repetidos e seis itens finais",()=>{
+        var result=LocalArsenals.Include(new(capture,false,false,""),args[fixture+2]);
+        Equal(3,result.Document.Variants.Count);
+        var sizes=result.Document.Variants.Take(2).Select(v=>v.PurchaseOrder!.Count).Order().ToArray();
+        True(sizes.SequenceEqual(new[]{8,11}));
+        foreach(var v in result.Document.Variants.Take(2)){
+            Equal(6,v.Core.Count);Equal(16,v.Alternatives.Count);
+            using var bundle=JsonDocument.Parse(ExportService.CreateItemSet(capture,v));
+            var order=bundle.RootElement.GetProperty("blocks")[1].GetProperty("items");
+            True(order.EnumerateArray().Select(i=>int.Parse(i.GetProperty("id").GetString()!)).SequenceEqual(v.PurchaseOrder!.Select(i=>i.Id)));
+        }
+        True(LocalArsenals.DirectoryFor(args[fixture+2],capture.Query with{Mode=GameMode.Aram})!=LocalArsenals.DirectoryFor(args[fixture+2],capture.Query));
+    });
+}
 if(args.Contains("--account-live")) {
     AsyncTest("LIVE conta do cliente LoL sem salvar credenciais",async()=>{var a=await new AccountService().ConnectAsync();True(a.RiotId.Length>0);True(a.Level>0);Console.WriteLine($"  perfil disponível, região {a.Region}, {a.Ranks.Count} filas ranqueadas, {a.Matches.Count} partidas");});
 }
@@ -102,6 +122,38 @@ if(args.Contains("--live")) {
     AsyncTest("LIVE Masters+ e função mid",async()=>{var query=new BuildQuery(103,"ahri",GameMode.Rift,"middle","master_plus",catalog!.Patch);var page=await remote.BuildHtmlAsync(query,CancellationToken.None);True(page.Contains("MASTER+",StringComparison.OrdinalIgnoreCase));var d=BuildParsers.ParseLolalytics(page,query);True(d.Variants[0].Core.Count>0);Console.WriteLine($"  Ahri {d.Role}, {d.Games} jogos");});
     using var game=new GameService();AsyncTest("LIVE detecção local sem alterar o jogo",async()=>{var snapshot=await game.PollAsync(catalog!);Console.WriteLine($"  {snapshot.Phase}, modo {snapshot.Mode}, campeão {snapshot.ChampionId}");});
 }
+Test("pós-jogo usa o participante e a equipe locais e separa proteção de autocura",()=>{
+    var sample=System.Text.Json.Nodes.JsonNode.Parse("""
+    {"gameId":42,"gameMode":"KIWI","gameLength":1245,"teams":[{"teamId":100,"isPlayerTeam":true,"isWinningTeam":false}],
+    "localPlayer":{"isLocalPlayer":true,"puuid":"own","teamId":100,"championId":98,"items":[3084,3111,0],"stats":{
+    "TOTAL_DAMAGE_DEALT_TO_CHAMPIONS":52694,"TOTAL_DAMAGE_TAKEN":106533,"TOTAL_HEAL":15247,
+    "TOTAL_HEAL_ON_TEAMMATES":0,"TOTAL_DAMAGE_SHIELDED_ON_TEAMMATES":2865,"CHAMPIONS_KILLED":13,"NUM_DEATHS":12,"ASSISTS":37}}}
+    """);
+    var score=FinalScore.Parse(sample,"own",42)!;
+    True(!score.Win && score.Duration==1245 && score.ChampionId==98 && score.AllyHealingAndShielding==2865 && score.ChampionDamage==52694);
+    True(score.Items!.SequenceEqual(new[]{3084,3111}));
+    True(FinalScore.Parse(sample,"other",42) is null && FinalScore.Parse(sample,"own",41) is null);
+    sample!["localPlayer"]!["stats"]!.AsObject().Remove("TOTAL_HEAL_ON_TEAMMATES");
+    True(FinalScore.Parse(sample,"own",42)!.AllyHealingAndShielding is null);
+});
+Test("placar associa jogadores por ID, conserva cartas escolhidas e bloqueia histórico de outra conta",()=>{
+    var doc=System.Text.Json.Nodes.JsonNode.Parse("""
+    {"gameId":10,"teams":[{"teamId":100,"win":"Fail"},{"teamId":200,"win":"Win"}],
+    "participants":[{"participantId":2,"teamId":200,"championId":17,"stats":{"item0":3084,"kills":20}},
+                    {"participantId":1,"teamId":100,"championId":98,"stats":{"playerAugment1":1053,"playerAugment2":1324,"playerAugment4":3134,"totalDamageDealtToChampions":52694}}],
+    "participantIdentities":[{"participantId":1,"player":{"gameName":"Meu Shen","puuid":"self"}},{"participantId":2,"player":{"gameName":"Outro","puuid":"rival"}}]}
+    """);
+    var teams=MatchRoster.FromHistory(doc,"self",10);
+    True(teams.Count==2 && teams[0].Win==false && teams[1].Win==true);
+    var self=teams[0].Players.Single();True(self.Local && self.Name=="Meu Shen" && self.Damage==52694 && self.Cards.SequenceEqual(new[]{1053,1324,3134}));
+    True(teams[1].Players.Single().Items.SequenceEqual(new[]{3084}));
+    True(MatchRoster.FromHistory(doc,"other",10).Count==0 && MatchRoster.FromHistory(doc,"self",11).Count==0);
+    var end=System.Text.Json.Nodes.JsonNode.Parse("""
+    {"teams":[{"teamId":100,"isWinningTeam":false,"players":[{"championId":98,"puuid":"self","items":[1,0,3],"stats":{"PLAYER_AUGMENT_4":3134,"NUM_DEATHS":12}}]}]}
+    """)!;
+    var player=MatchRoster.FromEnd(end,"self").Single().Players.Single();
+    True(player.Local && player.Deaths==12 && player.Items.SequenceEqual(new[]{1,3}) && player.Cards.SequenceEqual(new[]{3134}));
+});
 Console.WriteLine($"\n{passed} passed, {failed} failed");
 Environment.ExitCode=failed>0?1:0;
 

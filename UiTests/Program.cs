@@ -42,6 +42,23 @@ static class Program
         var q=new BuildQuery(26,"zilean",GameMode.Rift,Patch:"16.23");
         var d=new BuildDocument(q,"16.23","LoLalytics",BuildParsers.Url(q),DateTimeOffset.UtcNow,[new("Mais jogada",[new(2003)],[new(6655)],[])]);
         void Reset(){Set("ready",false);Control<ComboBox>("ModeBox").SelectedIndex=0;Set("selected",q);Set("current",new BuildResult(d,false,false,"ok"));Control<Button>("ExportButton").IsEnabled=true;Set("ready",true);}
+        Check("botão de atualização em Ajustes reflete verificação e reinício disponível",()=>{
+            Invoke("BuildResearch");
+            Button button=(Button)Get("updateButton")!;
+            True(button.IsEnabled && Equals(button.Content,"Atualizar versão"));
+            button.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+            True(((TextBlock)Get("updateStatus")!).Text.Contains("instalador"));
+            Set("updateBusy",true);
+            Invoke("BuildResearch");
+            True(!((Button)Get("updateButton")!).IsEnabled);
+            Set("updateBusy",false);
+            Set("readyVersion","9.9.9");
+            Invoke("RefreshUpdateButton");
+            button=(Button)Get("updateButton")!;
+            True(button.IsEnabled && Equals(button.Content,"Reiniciar e usar 9.9.9"));
+            Set("readyVersion",null);
+            Invoke("RefreshUpdateButton");
+        });
         Check("troca manual de modo limpa imediatamente build e exportação",()=>{Reset();Control<ComboBox>("ModeBox").SelectedIndex=1;True(Get("current") is null);True(!Control<Button>("ExportButton").IsEnabled);});
         Check("saguão sem campeão atualiza contexto e invalida build anterior",()=>{Reset();Set("snapshot",new GameSnapshot(true,"Saguão",Mode:"ARAM"));Set("lastDetection","");Invoke("ApplyDetection",false);True(Control<ComboBox>("ModeBox").SelectedIndex==1);True(Get("current") is null);True(!Control<Button>("ExportButton").IsEnabled);});
         Check("timeout sem cache mostra alternativa de recuperação",()=>{
@@ -110,6 +127,26 @@ static class Program
             var task=(Task<int?>)reader.GetMethod("ReadAsync")!.Invoke(null,[frame,new ClockPoint(.5,.5),engine])!;
             Pump(task);True(task.Result==37);
         });
+        Check("OCR das cartas reconhece posições e descarta a nota após rerrolar",()=>{
+            var engine=Windows.Media.Ocr.OcrEngine.TryCreateFromUserProfileLanguages()??throw new Exception("OCR indisponível");
+            var tiers=new Dictionary<string,string>{{"Tank Engine","A"},{"Mad Scientist","S"},{"Final Form","D"}};
+            var match=typeof(MainWindow).GetMethod("MatchCards",BindingFlags.Static|BindingFlags.NonPublic)!;
+            string[] Read(string middle){
+                var visual=new DrawingVisual();
+                using(var dc=visual.RenderOpen()){
+                    dc.DrawRectangle(Brushes.Black,null,new Rect(0,0,1600,460));
+                    foreach(var (x,title) in new[]{(480,"Tank Engine"),(800,middle),(1120,"Final Form")}){
+                        var glyph=new FormattedText(title,System.Globalization.CultureInfo.InvariantCulture,FlowDirection.LeftToRight,new Typeface("Segoe UI"),23,Brushes.White,1);
+                        dc.DrawText(glyph,new Point(x-glyph.Width/2,90));
+                    }
+                }
+                var band=new RenderTargetBitmap(1600,460,96,96,PixelFormats.Pbgra32);band.Render(visual);band.Freeze();
+                var task=(Task)match.Invoke(null,[band,tiers,engine])!;Pump(task);
+                var hits=(System.Collections.IEnumerable)task.GetType().GetProperty("Result")!.GetValue(task)!;
+                return hits.Cast<object>().Select(h=>(string)h.GetType().GetProperty("Grade")!.GetValue(h)!).ToArray();
+            }
+            True(Read("Mad Scientist").SequenceEqual(new[]{"A","S","D"}));True(Read("Unknown Title").SequenceEqual(new[]{"A","D"}));
+        });
         if(args.Length==2 && args[0] is "--render" or "--render-rift" or "--render-settings") {
             var realCatalogPath=Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),"NexoLoL","catalog.json");
             if(File.Exists(realCatalogPath)) {
@@ -130,6 +167,46 @@ static class Program
                 root.Measure(new Size(1264,renderHeight));root.Arrange(new Rect(0,0,1264,renderHeight));root.UpdateLayout();var bitmap=new RenderTargetBitmap(1264,renderHeight,96,96,PixelFormats.Pbgra32);bitmap.Render(root);var encoder=new PngBitmapEncoder();encoder.Frames.Add(BitmapFrame.Create(bitmap));using var file=File.Create(args[1]);encoder.Save(file);Console.WriteLine("Rendered in memory: "+args[1]);
             }
         }
+        Check("dois times, cartas e itens cabem na janela mínima",()=>{
+            bool preview=args.Length==3 && args[0]=="--render-postgame";
+            int[] ids=[3084,3111,3083,6664,3065,4401,220013];
+            List<ScoreTeam> teams;
+            if(preview){
+                string cache=Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),"Bardo.gg");
+                var real=JsonSerializer.Deserialize<Catalog>(File.ReadAllText(Path.Combine(cache,"catalog.json")))!;
+                Set("catalog",real);Set("catalogService",new CatalogService(cache,new RemoteData()));
+                var data=System.Text.Json.Nodes.JsonNode.Parse(File.ReadAllText(args[2]))!;
+                teams=MatchRoster.FromHistory(data,"preview",long.Parse(data["gameId"]!.ToString()));
+                True(teams.Count==2 && teams.All(t=>t.Players.Count==5));
+            }else{
+                catalog.Champions.Add(new(98,"Shen","Shen",""));Set("catalog",catalog);
+                teams=Enumerable.Range(1,2).Select(i=>new ScoreTeam(i*100,i==2,Enumerable.Range(1,5)
+                    .Select(j=>new ScorePlayer("Jogador "+j,98,i==1 && j==1,13,12,37,39,52694,[..ids],[1053,1324,1181,3134])).ToList())).ToList();
+            }
+            var match=new AccountMatch(42,98,"KIWI",false,13,12,37,39,1245,DateTimeOffset.UtcNow,52694,106533,2865,[..ids],teams);
+            Set("snapshot",new GameSnapshot(true,"Fim de partida"));Set("finalScore",match);
+            Invoke("ShowGame",window,new RoutedEventArgs());
+            var page=Control<ScrollViewer>("GamePage");var details=Control<StackPanel>("GameDetails");
+            var images=Descendants<Image>(details).ToList();
+            if(preview){
+                var end=DateTime.UtcNow.AddSeconds(25);
+                while(images.Any(i=>i.Source==null) && DateTime.UtcNow<end)Pump(Task.Delay(150));
+                Console.WriteLine($"  {images.Count(i=>i.Source!=null)}/{images.Count} ícones e artes carregados");
+                True(images.All(i=>i.Source!=null));
+                Control<TextBlock>("ConnectionText").Text="Pós-jogo";Control<ComboBox>("ChampionBox").SelectedIndex=-1;
+            }else images[0].Source=new RenderTargetBitmap(1215,717,96,96,PixelFormats.Pbgra32);
+            double w=window.MinWidth,h=window.MinHeight;
+            root.Measure(new Size(w,h));root.Arrange(new Rect(0,0,w,h));root.UpdateLayout();
+            var labels=Descendants<TextBlock>(details).Select(t=>t.Text).ToList();
+            True(teams.SelectMany(t=>t.Players).All(p=>labels.Contains(p.Name)));
+            double lastBottom=images.Last().TranslatePoint(new Point(0,images.Last().ActualHeight),page).Y;
+            True(page.ViewportHeight>0 && page.ScrollableHeight==0 && lastBottom>0 && lastBottom<=page.ViewportHeight);
+            Console.WriteLine($"  {w} × {h} · viewport {page.ViewportHeight:0} · rolagem {page.ScrollableHeight:0}");
+            if(preview){
+                var frame=new RenderTargetBitmap((int)w,(int)h,96,96,PixelFormats.Pbgra32);frame.Render(root);
+                var png=new PngBitmapEncoder();png.Frames.Add(BitmapFrame.Create(frame));using var file=File.Create(args[1]);png.Save(file);
+            }
+        });
         window.Close();app.Shutdown();Directory.Delete(directory,true);Console.WriteLine($"{passed} passed, {failed} failed · nenhuma janela exibida");return failed>0?1:0;
     }
     static IEnumerable<T> Descendants<T>(DependencyObject obj) where T:DependencyObject

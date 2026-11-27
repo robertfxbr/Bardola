@@ -12,7 +12,9 @@ public static class ExportService
             title=$"Bardo.gg · {doc.Query.Slug} · {doc.Query.Mode} · {doc.Patch}",
             type="custom",map=doc.Query.Mode==GameMode.Rift?"SR":"HA",mode="any",priority=false,
             sortrank=0,associatedMaps=new[]{doc.Query.Mode==GameMode.Rift?11:12},associatedChampions=new[]{doc.Query.ChampionId},preferredItemSlots=Array.Empty<object>(),
-            blocks=new[]{Block("Início",variant.Start),Block("Itens principais",variant.Core),Block("Escolhas de botas",variant.Boots??[]),Block("Alternativas situacionais",variant.Alternatives)}
+            blocks=new (string Name,List<ItemChoice> Items)[]{("Início",variant.Start),("Ordem de compra",variant.PurchaseOrder??[]),
+                (variant.PurchaseOrder is null?"Itens principais":"Build final",variant.Core),("Escolhas de botas",variant.Boots??[]),
+                ("Alternativas situacionais",variant.Alternatives),("Mais comprados",variant.FrequentItems??[])}.Where(b=>b.Items.Count>0).Select(b=>Block(b.Name,b.Items))
         },new JsonSerializerOptions{WriteIndented=true});
     }
 }

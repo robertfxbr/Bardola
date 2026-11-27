@@ -31,11 +31,24 @@ public sealed class LeagueClient : ILeagueApi
     public Task<JsonNode?> GetAsync(string path,CancellationToken ct=default)=>SendAsync(HttpMethod.Get,path,null,ct);
     public async Task<JsonNode?> SendAsync(HttpMethod method,string path,JsonNode? body,CancellationToken ct=default)
     {
-        if(!path.StartsWith('/') || path.StartsWith("//") || path.Contains('\\'))throw new ArgumentException("Endpoint local inválido.");
-        var uri=new Uri(origin,path);if(uri.Host!=origin.Host || uri.Port!=origin.Port || uri.Scheme!="https")throw new ArgumentException("A conexão deve permanecer local.");
-        using var message=new HttpRequestMessage(method,uri);message.Headers.Authorization=new AuthenticationHeaderValue("Basic",authorization);
+        using var message=Request(method,path);
         if(body is not null)message.Content=new StringContent(body.ToJsonString(),Encoding.UTF8,"application/json");
         using var response=await client.SendAsync(message,ct);response.EnsureSuccessStatusCode();string content=await response.Content.ReadAsStringAsync(ct);return string.IsNullOrWhiteSpace(content)?null:JsonNode.Parse(content);
+    }
+    public async Task<byte[]> AugmentIconAsync(string path,CancellationToken ct)
+    {
+        if(!path.StartsWith("/lol-game-data/assets/ASSETS/UX/",StringComparison.OrdinalIgnoreCase) ||
+           path.Contains("..") || !path.EndsWith(".png",StringComparison.OrdinalIgnoreCase))throw new InvalidDataException("Caminho do ícone inválido.");
+        using var message=Request(HttpMethod.Get,path);
+        using var response=await client.SendAsync(message,ct);response.EnsureSuccessStatusCode();
+        return await response.Content.ReadAsByteArrayAsync(ct);
+    }
+    HttpRequestMessage Request(HttpMethod method,string path)
+    {
+        if(!path.StartsWith('/') || path.StartsWith("//") || path.Contains('\\'))throw new ArgumentException("Endpoint local inválido.");
+        var uri=new Uri(origin,path);if(uri.Host!=origin.Host || uri.Port!=origin.Port || uri.Scheme!="https")throw new ArgumentException("A conexão deve permanecer local.");
+        var message=new HttpRequestMessage(method,uri);message.Headers.Authorization=new AuthenticationHeaderValue("Basic",authorization);
+        return message;
     }
     public void Dispose()=>client.Dispose();
 }

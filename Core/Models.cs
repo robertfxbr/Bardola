@@ -8,10 +8,12 @@ public record BuildQuery(int ChampionId, string Slug, GameMode Mode, string Role
 public record ItemChoice(int Id, int Count = 1, double? WinRate = null, int Games = 0);
 public record RunePage(int PrimaryStyle, int SecondaryStyle, List<int> Perks);
 public record BuildVariant(string Name, List<ItemChoice> Start, List<ItemChoice> Core, List<ItemChoice> Alternatives,
-    string SkillPriority = "", string SkillOrder = "", RunePage? Runes = null, int Games = 0, double? WinRate = null, List<ItemChoice>? Boots = null, List<int>? SummonerSpells = null);
+    string SkillPriority = "", string SkillOrder = "", RunePage? Runes = null, int Games = 0, double? WinRate = null, List<ItemChoice>? Boots = null, List<int>? SummonerSpells = null,
+    List<ItemChoice>? PurchaseOrder = null, string? ArsenalSource = null, List<ItemChoice>? FrequentItems = null);
 public record BuildDocument(BuildQuery Query, string Patch, string Source, string SourceUrl, DateTimeOffset FetchedAt,
     List<BuildVariant> Variants, double? WinRate = null, int Games = 0, string Role = "", List<int>? StrongAgainst = null,
-    List<int>? WeakAgainst = null, List<string>? Augments = null, string Note = "", string? SourceDate = null);
+    List<int>? WeakAgainst = null, List<string>? Augments = null, string Note = "", string? SourceDate = null,
+    Dictionary<string,string>? AugmentTiers = null);
 public record BuildResult(BuildDocument Document, bool FromCache, bool Stale, string Message);
 public record Champion(int Id, string Key, string Name, string Title)
 {

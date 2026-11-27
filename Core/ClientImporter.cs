@@ -46,7 +46,7 @@ public sealed class ClientImporter(string backupDirectory)
             Interlocked.Exchange(ref completedKey,null); // Uma tentativa parcial pode modificar a página compartilhada.
             string items=options.Items?"Aguardando":"Desligado",runes=options.Runes?"Aguardando":"Desligado",spells=options.Spells?"Aguardando":"Desligado";bool success=true,changed=false;
             if(options.Items) {
-                try{await ApplyItems(api,selection,document,build,ct);items="Itens aplicados no LoL";changed=true;}
+                try{await ApplyItems(api,selection,document,build,ct);items=$"Arsenal de {document.Query.Slug} confirmado · {build.Name}";changed=true;}
                 catch(Exception e) when(Recoverable(e,ct)){items="Itens: "+e.Message;success=false;}
             }
             if(options.Runes && selection.Mode!=GameMode.Mayhem) {
@@ -78,16 +78,29 @@ public sealed class ClientImporter(string backupDirectory)
         await Revalidate(api,expected,ct);
         bundle=await api.GetAsync(path,ct) as JsonObject??throw new InvalidDataException("coleção de itens indisponível");
         if(bundle["itemSets"] is not JsonArray sets)throw new InvalidDataException("formato de coleção não reconhecido");
-        string uid=new Guid(SHA256.HashData(Encoding.UTF8.GetBytes($"NexoLoL:{expected.Owner}:{doc.Query.ChampionId}:{doc.Query.Mode}")).AsSpan(0,16)).ToString();
-        var generated=JsonNode.Parse(ExportService.CreateItemSet(doc,variant))!;generated["uid"]=uid;
-        generated["title"]=$"Bardo.gg · {doc.Query.Slug} · {doc.Patch}";
-        int index=-1;for(int i=0;i<sets.Count;i++)if(S(sets[i]?["uid"])==uid){index=i;break;}
-        if(index>=0)sets[index]=generated;else sets.Add(generated);
+        var arsenals=variant.ArsenalSource is null ? new[]{variant} : doc.Variants.Where(v=>v.ArsenalSource is not null).ToArray();
+        var requested=new List<JsonNode>();
+        foreach(var arsenal in arsenals) {
+            string identity=$"NexoLoL:{expected.Owner}:{doc.Query.ChampionId}:{doc.Query.Mode}";
+            if(arsenal.ArsenalSource is not null)identity+=":"+doc.Query.Role+":"+arsenal.Name;
+            string uid=new Guid(SHA256.HashData(Encoding.UTF8.GetBytes(identity)).AsSpan(0,16)).ToString();
+            var generated=JsonNode.Parse(ExportService.CreateItemSet(doc,arsenal))!;
+            generated["uid"]=uid;
+            if(arsenal.ArsenalSource is not null)generated["priority"]=arsenal==variant;
+            generated["title"]=arsenal.ArsenalSource is null?$"Bardo.gg · {doc.Query.Slug} · {doc.Patch}":$"Bardo.gg · {arsenal.Name} · {doc.Patch}";
+            int index=-1;for(int i=0;i<sets.Count;i++)if(S(sets[i]?["uid"])==uid){index=i;break;}
+            if(index>=0)sets[index]=generated;else sets.Add(generated);
+            requested.Add(generated);
+        }
         await Revalidate(api,expected,ct);
         await api.SendAsync(HttpMethod.Put,path,bundle,ct);
         var confirmed=await api.GetAsync(path,ct);
-        var set=(confirmed?["itemSets"] as JsonArray)?.FirstOrDefault(x=>S(x?["uid"])==uid);
-        if(set is null || new[]{"uid","associatedChampions","associatedMaps","blocks"}.Any(k=>!JsonNode.DeepEquals(set[k],generated[k])))throw new InvalidDataException("o cliente não confirmou o conjunto importado");
+        foreach(var generated in requested) {
+            var set=(confirmed?["itemSets"] as JsonArray)?.FirstOrDefault(x=>S(x?["uid"])==S(generated["uid"]));
+            if(set is null || new[]{"uid","title","associatedChampions","associatedMaps","blocks"}.Any(k=>!JsonNode.DeepEquals(set[k],generated[k])))
+                throw new InvalidDataException($"o cliente não confirmou o conjunto {S(generated["title"])}");
+        }
+        await Revalidate(api,expected,ct);
     }
     async Task ApplyRunes(ILeagueApi api,ImportSelection expected,RunePage? runes,bool reuse,CancellationToken ct)
     {

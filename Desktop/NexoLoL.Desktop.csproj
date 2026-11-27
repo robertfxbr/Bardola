@@ -2,7 +2,7 @@
  <PropertyGroup>
   <OutputType>WinExe</OutputType><TargetFramework>net10.0-windows10.0.19041.0</TargetFramework><UseWPF>true</UseWPF>
   <ImplicitUsings>enable</ImplicitUsings><Nullable>enable</Nullable><AssemblyName>BardoApp</AssemblyName>
-  <Version>0.5.0</Version><Product>Bardo.gg</Product><Description>Companheiro de League of Legends com atualização automática</Description>
+  <Version>0.7.1</Version><Product>Bardo.gg</Product><Description>Companheiro de League of Legends com atualização automática</Description>
  </PropertyGroup>
  <ItemGroup><ProjectReference Include="../Core/NexoLoL.Core.csproj"/><ProjectReference Include="../UpdateCore/NexoLoL.UpdateCore.csproj"/></ItemGroup>
  <ItemGroup><Content Include="../LICENSE" Link="LICENSE" CopyToPublishDirectory="PreserveNewest"/><Content Include="../THIRD_PARTY_NOTICES.md" Link="THIRD_PARTY_NOTICES.md" CopyToPublishDirectory="PreserveNewest"/><Content Include="../SOURCE.txt" Link="SOURCE.txt" CopyToPublishDirectory="PreserveNewest"/></ItemGroup>

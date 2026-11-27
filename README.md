@@ -5,10 +5,12 @@ Companheiro independente para **League of Legends**, em português, sem Overwolf
 - Builds por campeão, modo, função, elo e patch, com fonte e amostra visíveis.
 - Importação automática de itens, runas e feitiços na seleção de campeão; Flash no D ou F e backup da página de runas reutilizada.
 - Perfil da conta ativa no cliente, ranques e histórico recente, sem pedir a senha do LoL.
+- Arsenais locais por campeão e patch, com ordem de compra e variantes na loja. Em Ajustes, é possível adicionar arquivos JSON de arsenal do Blitz.
+- Tier das cartas do ARAM Desordem por campeão. O overlay opcional reconhece os títulos em inglês no modo sem bordas.
 - Catálogo e imagens oficiais, favoritos, cache validado e exportação de conjuntos de itens.
 - Painel opcional de estatísticas próprias, build e prioridade de habilidades para modo sem bordas/segundo monitor.
 - Cronômetros automáticos no minimapa usando o modo avançado do próprio LoL; contadores de cura do ARAM sincronizados pelo placar.
-- Atualizações assinadas em segundo plano, usadas na próxima abertura pelo mesmo atalho.
+- Atualizações assinadas em segundo plano. Em **Ajustes → Atualizar versão**, você pode buscar uma atualização e reiniciar o Bardo.gg assim que ela estiver pronta.
 
 ## Instalar
 

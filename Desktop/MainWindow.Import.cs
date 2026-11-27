@@ -8,6 +8,32 @@ namespace NexoLoL.Desktop;
 
 public partial class MainWindow
 {
+    async Task ImportLocalArsenal()
+    {
+        if(current?.Document is not { } doc){MessageBox.Show(this,"Abra a build do campeão e modo antes de adicionar o arsenal.");return;}
+        var q=doc.Query;
+        var dialog=new Microsoft.Win32.OpenFileDialog{Title=$"Importar para {q.Slug} · {ModeName(q.Mode)} · patch {doc.Patch}",
+            Filter="Arsenal do Blitz (*.json)|*.json"};
+        const string common=@"C:\Riot Games\League of Legends\Config\Global\Recommended";
+        if(Directory.Exists(common))dialog.InitialDirectory=common;
+        if(dialog.ShowDialog(this)!=true)return;
+        try {
+            if(new FileInfo(dialog.FileName).Length>128_000)throw new InvalidDataException("Arquivo de arsenal muito grande.");
+            string json=await File.ReadAllTextAsync(dialog.FileName);
+            var set=LocalArsenals.Read(json,q.Slug);
+            if(set.Start.Concat(set.Core).Concat(set.Alternatives).Concat(set.PurchaseOrder??[]).Concat(set.Boots??[])
+                .Any(i=>!catalog.Items.ContainsKey(i.Id)))throw new InvalidDataException("O catálogo do patch não reconhece todos os itens.");
+            if(MessageBox.Show(this,$"Usar {set.Name} em {ModeName(q.Mode)}, patch {doc.Patch}? O arquivo do Blitz não informa o modo nem o patch.",
+                "Vincular arsenal ao contexto",MessageBoxButton.YesNo)!=MessageBoxResult.Yes)return;
+            var key=Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(set.Name)));
+            await Storage.WriteAsync(Path.Combine(LocalArsenals.DirectoryFor(dataRoot,q),key+".json"),json,lifetime.Token);
+            importer.ResetSession();lastImportKey="";lastImportAttempt="";
+            if(Query()==q)await LoadBuild();
+        }catch(OperationCanceledException) when(lifetime.IsCancellationRequested){}
+        catch(Exception e) when(e is IOException or InvalidDataException or UnauthorizedAccessException or System.Text.Json.JsonException or KeyNotFoundException or InvalidOperationException){
+            MessageBox.Show(this,"Não foi possível adicionar o arsenal. "+e.Message);
+        }
+    }
     readonly ClientImporter importer;
     readonly Func<ILeagueApi> leagueApiFactory;
     CancellationTokenSource? importRequest;
@@ -38,7 +64,7 @@ public partial class MainWindow
             if(displayed) {
                 if(current is null){ImportStatus("Carregue uma build antes de aplicar","A seleção do LoL será conferida",true);return;}
                 document=current.Document;variant=variantIndex;
-            }else document=(await builds.GetAsync(query,false,token,requireSpells:options.Spells)).Document;
+            }else document=LocalArsenals.Include(await builds.GetAsync(query,false,token,requireSpells:options.Spells),dataRoot,catalog.Items).Document;
             if(token.IsCancellationRequested)return;
             var unknown=document.Variants[variant].Core.Concat(document.Variants[variant].Start).Any(i=>!catalog.Items.ContainsKey(i.Id));
             if(options.Items&&unknown)throw new InvalidDataException("A build contém itens incompatíveis com o catálogo atual.");

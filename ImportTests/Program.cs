@@ -9,6 +9,24 @@ string temp=Path.Combine(Path.GetTempPath(),"nexo-import-"+Guid.NewGuid().ToStri
 var q=new BuildQuery(26,"zilean",GameMode.Rift,"support",Patch:"16.23");
 var doc=new BuildDocument(q,"16.23","LoLalytics",BuildParsers.Url(q),DateTimeOffset.UtcNow,[new("Mais jogada",[new(3865),new(2003,2)],[new(2065),new(3158)],[new(2524)],"QEW","",new(8200,8100,[8214,8226,8210,8232,8105,8126,5007,5008,5001]))]);
 ClientImporter Importer()=>new(Path.Combine(temp,Guid.NewGuid().ToString("N")));
+await Test("duas variantes na loja são confirmadas e a troca de prioridade não duplica arsenais",async()=>{
+    using var api=new FakeApi();
+    var tank=doc.Variants[0] with{Name="Tank",ArsenalSource="Blitz · arsenal local",PurchaseOrder=[new(1001),new(1001)]};
+    var bruiser=tank with{Name="Bruiser",Core=[new(3003)]};
+    var document=doc with{Variants=[tank,bruiser,doc.Variants[0]]};
+    var importer=Importer();
+    True((await importer.ApplyAsync(api,document,0,new(Runes:false))).Success);
+    True((await importer.ApplyAsync(api,document,1,new(Runes:false))).Success);
+    var sets=api.Sets["itemSets"]!.AsArray();
+    True(sets.Count==4);
+    True(sets.Count(s=>s!["title"]!.ToString().Contains("Bruiser") && s["priority"]!.GetValue<bool>())==1);
+    True(sets.Any(s=>s!["uid"]!.ToString()=="personal"));
+});
+await Test("arsenal não confirmado se campeão trocar depois da escrita",async()=>{
+    using var api=new FakeApi();
+    api.OnWrite=(_,path,_)=>{if(path.Contains("item-sets"))api.Champion=98;};
+    True(!(await Importer().ApplyAsync(api,doc,0,new(Runes:false))).Success);
+});
 await Test("fora da seleção não altera itens nem runas",async()=>{using var api=new FakeApi{Phase="Lobby"};await Importer().ApplyAsync(api,doc,0,new());True(api.Writes.Count==0);});
 await Test("importa itens preservando conjuntos pessoais e de outros apps",async()=>{using var api=new FakeApi();var result=await Importer().ApplyAsync(api,doc,0,new(Runes:false));True(result.Success);True(api.Sets["itemSets"]!.AsArray().Count==3);True(api.Sets["itemSets"]![0]!["title"]!.ToString()=="Meu conjunto");True(api.Sets["itemSets"]![1]!["uid"]!.ToString()=="blitz-keep");True(api.Sets["itemSets"]!.AsArray().Last()!["blocks"]![0]!["items"]![1]!["count"]!.GetValue<int>()==2);});
 await Test("cria e ativa runas usando IDs do catálogo",async()=>{using var api=new FakeApi();var result=await Importer().ApplyAsync(api,doc,0,new(Items:false));True(result.Success);True(api.Pages.Count==2);var page=api.Pages.Last()!;True(page["primaryStyleId"]!.GetValue<int>()==8200);True(page["subStyleId"]!.GetValue<int>()==8100);True(page["selectedPerkIds"]!.AsArray().Count==9);True(api.CurrentId==page["id"]!.GetValue<int>());});

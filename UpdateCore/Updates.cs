@@ -24,6 +24,12 @@ public sealed class UpdateManager(string installation,string feed,string publicK
         var current=Current()??throw new InvalidDataException("Nenhuma versão válida do Bardo.gg está instalada.");
         return VerifiedExecutable(current.Version);
     }
+    public string? ReadyVersionAfter(Version running)
+    {
+        var installed=Current();
+        if(installed is null || Version.Parse(installed.Version)<=running)return null;
+        return IsUsable(installed.Version)?installed.Version:null;
+    }
     public async Task<UpdateResult> CheckAsync(CancellationToken ct=default)
     {
         ct.ThrowIfCancellationRequested();Directory.CreateDirectory(Root);

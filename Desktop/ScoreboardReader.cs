@@ -46,21 +46,29 @@ internal static class ScoreboardReader
         }catch(ArgumentException){return false;}catch(InvalidOperationException){return false;}catch(System.ComponentModel.Win32Exception){return false;}
     }
     public static BitmapSource? Capture(bool bottom=false)
+        => CaptureRegion(bottom, true);
+
+    public static BitmapSource? CaptureCardBand() => CaptureRegion(false, false);
+
+    internal const double CardBandTop = 0.18;
+    static BitmapSource? CaptureRegion(bool bottom, bool scoreboard)
     {
         var window=GetForegroundWindow();
-        if(window==IntPtr.Zero || GetAsyncKeyState(9)>=0)return null;
+        if(window==IntPtr.Zero || (scoreboard && GetAsyncKeyState(9)>=0))return null;
         GetWindowThreadProcessId(window,out int id);
         using var game=Process.GetProcessById(id);
         if(!game.ProcessName.Equals("League of Legends",StringComparison.OrdinalIgnoreCase))return null;
         if(!GetClientRect(window,out var rect)||rect.Right<640||rect.Bottom<400)return null;
-        int width=rect.Right,height=rect.Bottom/3;
+        int width=scoreboard?rect.Right:Math.Min(rect.Right,(int)(rect.Bottom*1.78));
+        int height=scoreboard?rect.Bottom/3:(int)(rect.Bottom*0.50);
+        int left=(rect.Right-width)/2, top=scoreboard?(bottom?rect.Bottom-height:0):(int)(rect.Bottom*CardBandTop);
         var dc=GetDC(window);
         if(dc==IntPtr.Zero)return null;
         var copy=CreateCompatibleDC(dc);
         var bitmap=CreateCompatibleBitmap(dc,width,height);
         var previous=SelectObject(copy,bitmap);
         try{
-            if(previous==IntPtr.Zero || !BitBlt(copy,0,0,width,height,dc,0,bottom?rect.Bottom-height:0,0x00CC0020) || GetForegroundWindow()!=window || GetAsyncKeyState(9)>=0)return null;
+            if(previous==IntPtr.Zero || !BitBlt(copy,0,0,width,height,dc,left,top,0x00CC0020) || GetForegroundWindow()!=window || (scoreboard && GetAsyncKeyState(9)>=0))return null;
             var image=Imaging.CreateBitmapSourceFromHBitmap(bitmap,IntPtr.Zero,Int32Rect.Empty,BitmapSizeOptions.FromEmptyOptions());
             image.Freeze();
             return image;

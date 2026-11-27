@@ -53,6 +53,7 @@ public partial class MainWindow : Window
         importer=new ClientImporter(Path.Combine(dataRoot,"rune-backups"));leagueApiFactory=apiFactory??LeagueClient.Open;
         remote=remoteData;
         InitializeComponent();
+        Title="Bardo.gg "+RunningVersion;VersionLabel.Text=RunningVersion;
         pollTimer.Tick+=async(_,_)=>await PollGame();
         selectionTimer.Tick+=async(_,_)=>{selectionTimer.Stop();await LoadBuild();};
     }
@@ -74,7 +75,7 @@ public partial class MainWindow : Window
             AutoItems.IsChecked=preferences.AutoImportItems;AutoRunes.IsChecked=preferences.AutoImportRunes;AutoSpells.IsChecked=preferences.AutoImportSpells;
             snapshot=await game.PollAsync(catalog,lifetime.Token);UpdateConnection();
             if(AutoDetect.IsChecked==true)ApplyDetection(true);
-            ready=true;UpdateModeControls();SetNav(BuildNav);BuildResearch();RenderAccount();pollTimer.Start();if(!relicPoll.IsEnabled)StartRelicPolling();StartUpdates();
+            ready=true;UpdateModeControls();SetNav(BuildNav);BuildResearch();RenderAccount();pollTimer.Start();if(!relicPoll.IsEnabled)StartRelicPolling();if(!cardPoll.IsEnabled)StartCardReader();StartUpdates();
             if(preferences.LinkAccount)_=ConnectAccount();
             await LoadBuild();
         }catch(OperationCanceledException) {}
@@ -135,7 +136,7 @@ public partial class MainWindow : Window
         Notice($"Buscando build de {champion.Name} para {ModeName(query.Mode)}…");UpdateFavorite();UpdateCompact();
         _=LoadAbilities(champion,query,token);_=SavePreferences();
         try {
-            var result=await builds.GetAsync(query,force,token);
+            var result=LocalArsenals.Include(await builds.GetAsync(query,force,token),dataRoot,catalog.Items);
             if(token.IsCancellationRequested || selected!=query)return;
             var missing=result.Document.Variants.SelectMany(v=>v.Start.Concat(v.Core)).FirstOrDefault(i=>!catalog.Items.ContainsKey(i.Id));
             if(missing is not null)throw new InvalidDataException("A fonte trouxe itens que não constam no catálogo atual. Tente Atualizar ou abra a fonte.");
@@ -203,6 +204,7 @@ public partial class MainWindow : Window
                 try{await Storage.WriteAsync(Path.Combine(dataRoot,"sessions.json"),JsonSerializer.Serialize(sessions),lifetime.Token);}catch(IOException) {}
             }
             snapshot=next;UpdateConnection();UpdateTimerClock();UpdateOverlay();_=ApplyNativeTimerPreference();if(AutoDetect.IsChecked==true)ApplyDetection();
+            await UpdateFinalScore();
             if(importBusy && activeImportSelection is { } importing && (next.Phase!="Seleção de campeão" || next.ChampionId!=importing.ChampionId || GameService.DetectMode(next.Mode)!=importing.Mode))importRequest?.Cancel();
             _=RunAutoImport();
             if(GamePage.Visibility==Visibility.Visible)RenderGame();
@@ -237,8 +239,14 @@ public partial class MainWindow : Window
     {if(!ready)return;ApplyDetection(true);_=SavePreferences();}
     void RenderGame()
     {
+        var recap=snapshot.Connected && snapshot.GameTime<=0 ? finalScore ?? (snapshot.Phase=="Fim de partida"?null:account?.Matches.FirstOrDefault()) : null;
+        if(recap is not null){
+            if(ReferenceEquals(recap,renderedScore))return;
+            renderedScore=recap;GameDetails.Children.Clear();AddFinalScore(recap);return;
+        }
+        renderedScore=null;
         GameDetails.Children.Clear();var hero=new StackPanel();hero.Children.Add(Text(snapshot.Phase,25,true));
-        hero.Children.Add(Text(snapshot.GameTime>0?"Dados do seu jogador, lidos localmente durante esta partida.":"O painel se atualiza quando uma partida começar. Você pode consultar builds manualmente a qualquer momento.",13,false,Muted,top:10));GameDetails.Children.Add(Card(hero));
+        hero.Children.Add(Text(snapshot.GameTime>0?"Dados do seu jogador, lidos localmente durante esta partida.":snapshot.Phase=="Fim de partida"?"Aguardando o placar final do cliente do League.":"O painel se atualiza quando uma partida começar. Você pode consultar builds manualmente a qualquer momento.",13,false,Muted,top:10));GameDetails.Children.Add(Card(hero));
         if(snapshot.GameTime>0) {
             var stats=new WrapPanel();
             foreach(var (label,value) in new[]{("CAMPEÃO",catalog.Champions.FirstOrDefault(c=>c.Id==snapshot.ChampionId)?.Name??"Detectando"),("K / D / A",$"{snapshot.Kills} / {snapshot.Deaths} / {snapshot.Assists}"),("CS / MIN",(snapshot.Cs/Math.Max(1,snapshot.GameTime/60)).ToString("0.0",Pt)),("FARM",snapshot.Cs.ToString()),("OURO DISPONÍVEL",snapshot.Gold.ToString("N0",Pt)),("VISÃO",snapshot.Vision.ToString("0.#",Pt)),("NÍVEL",snapshot.Level.ToString()),("TEMPO",TimeSpan.FromSeconds(snapshot.GameTime).ToString(@"mm\:ss"))}) {
@@ -335,12 +343,12 @@ public partial class MainWindow : Window
     void SetNav(Button nav)
     {foreach(var b in new[]{BuildNav,ChampionNav,GameNav,AccountNav,SavedNav,ResearchNav}){b.Background=Brush("#171A21");b.Foreground=b==nav?Accent:Muted;b.BorderBrush=b==nav?Accent:Brush("#171A21");}}
     void ShowBuilds(object sender,RoutedEventArgs e)=>ShowPage(BuildPage,BuildNav,"Build do campeão","LEAGUE OF LEGENDS");
-    void ShowGame(object sender,RoutedEventArgs e){ShowPage(GamePage,GameNav,"Seu jogo, em contexto.","ACOMPANHAMENTO LOCAL");RenderGame();}
+    void ShowGame(object sender,RoutedEventArgs e){ShowPage(GamePage,GameNav,"Partida","LEAGUE OF LEGENDS");RenderGame();}
     void ShowSaved(object sender,RoutedEventArgs e){ShowPage(SavedPage,SavedNav,"Seu repertório.","CAMPEÕES FAVORITOS");RenderSaved();}
     void ShowResearch(object sender,RoutedEventArgs e){BuildResearch();ShowPage(ResearchPage,ResearchNav,"Configurações","PREFERÊNCIAS DO BARDO.GG");}
     void ShowAccount(object sender,RoutedEventArgs e){ShowPage(AccountPage,AccountNav,"Sua conta do League.","PERFIL CONECTADO AO CLIENTE");RenderAccount();}
     void OnClosed(object? sender,EventArgs e)
-    {ready=false;relicPoll.Stop();ClearRelicReadings();mapOverlay?.Close();calibrationWindow?.Close();pollTimer.Stop();selectionTimer.Stop();updateTimer.Stop();lifetime.Cancel();nativeTimerRequest?.Cancel();overlay?.Close();request?.Cancel();accountRequest?.Cancel();importRequest?.Cancel();compact?.Close();remote.Dispose();game.Dispose();lifetime.Dispose();}
+    {ready=false;cardPoll.Stop();cardOverlay?.Close();relicPoll.Stop();ClearRelicReadings();mapOverlay?.Close();calibrationWindow?.Close();pollTimer.Stop();selectionTimer.Stop();updateTimer.Stop();lifetime.Cancel();nativeTimerRequest?.Cancel();overlay?.Close();request?.Cancel();accountRequest?.Cancel();importRequest?.Cancel();compact?.Close();remote.Dispose();game.Dispose();lifetime.Dispose();}
 
     async void LoadIcon(Image target,string url,CancellationToken token)
     {
@@ -385,6 +393,7 @@ public sealed class Preferences
     public bool ReuseActiveRunePage {get;set;}=true;
     public bool AutoImportSpells {get;set;}=true;
     public bool FlashOnLeft {get;set;}=true;
+    public bool CardTiers {get;set;}
     public bool AutoMapRelics {get;set;}
     public ClockPoint[]? ClockLocations {get;set;}
     public ClockPoint[]? MapLocations {get;set;}

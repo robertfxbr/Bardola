@@ -26,6 +26,17 @@ await Test("rollback só promove versão anterior assinada e íntegra",async()=>
 await Test("executável instalado adulterado não pode ser iniciado",async()=>{var f=Fixture();ReleasePublisher.Publish(f.app,f.feed,"0.3.0",secret);var m=new UpdateManager(f.install,f.feed,pub);await m.CheckAsync();File.AppendAllText(m.Executable(),"evil");bool rejected=false;try{m.Executable();}catch(InvalidDataException){rejected=true;}True(rejected);});
 await Test("duas verificações concorrentes promovem pacote apenas uma vez",async()=>{var f=Fixture();ReleasePublisher.Publish(f.app,f.feed,"0.3.0",secret);var m=new UpdateManager(f.install,f.feed,pub);var results=await Task.WhenAll(Task.Run(()=>m.CheckAsync()),Task.Run(()=>m.CheckAsync()));True(results.Count(r=>r.Updated)==1);True(File.Exists(m.Executable()));});
 await Test("migração copia configurações e backup sem sobrescrever dados atuais",()=>{var f=Fixture();string old=Path.Combine(f.app,"legacy");Directory.CreateDirectory(Path.Combine(old,"rune-backups"));File.WriteAllText(Path.Combine(old,"preferences-v2.json"),"antiga");File.WriteAllText(Path.Combine(f.install,"preferences-v2.json"),"atual");File.WriteAllText(Path.Combine(old,"rune-backups","backup.json"),"backup");BardoPaths.MigrateLegacyData(f.install,old);BardoPaths.MigrateLegacyData(f.install,old);True(File.ReadAllText(Path.Combine(f.install,"preferences-v2.json"))=="atual");True(File.ReadAllText(Path.Combine(f.install,"rune-backups","backup.json"))=="backup");True(File.Exists(Path.Combine(old,"preferences-v2.json")));return Task.CompletedTask;});
+await Test("só oferece reinício para uma versão local mais nova e íntegra, mesmo offline",async()=>{
+    var f=Fixture();
+    ReleasePublisher.Publish(f.app,f.feed,"0.7.1",secret);
+    var manager=new UpdateManager(f.install,f.feed,pub);
+    await manager.CheckAsync();
+    File.Delete(Path.Combine(f.feed,"latest.json"));
+    True(manager.ReadyVersionAfter(new Version("0.7.0"))=="0.7.1");
+    True(manager.ReadyVersionAfter(new Version("0.7.1")) is null);
+    File.AppendAllText(manager.Executable(),"corrompido");
+    True(manager.ReadyVersionAfter(new Version("0.7.0")) is null);
+});
 Directory.Delete(root,true);Console.WriteLine($"{passed} passed, {failed} failed");return failed>0?1:0;
 
 void Sign(string package,string feed,string version)
