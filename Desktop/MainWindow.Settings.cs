@@ -33,6 +33,7 @@ public partial class MainWindow
     {
         preferences.GhostMode=enabled;
         ghost.SetEnabled(enabled);
+        ApplyBrandMode(enabled);
         if(enabled){
             if(mapOverlay?.IsVisible==true)CanShowGhostOverlay(mapOverlay);
             if(cardOverlay?.IsVisible==true)CanShowGhostOverlay(cardOverlay);

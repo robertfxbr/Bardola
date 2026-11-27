@@ -1,5 +1,5 @@
-Bardola 0.8.3
+Bardola 0.8.4
 
-Em **Ajustes → Modo ghost**, ative a exclusão das janelas do Bardola nas capturas compatíveis com o Windows. A mudança vale imediatamente e a preferência é restaurada ao abrir o app novamente.
+O espírito de Bardola aparece no instalador, na barra de título e no ícone do aplicativo. Em Ajustes, ativar o modo ghost troca o espírito preenchido pela versão em contorno. As sobreposições exibem o símbolo com a palavra GHOST.
 
-O painel compacto e os overlays de partida, cartas e curas acompanham o ajuste. Os elementos desenhados pelo próprio League continuam fazendo parte da imagem do jogo.
+Os controles e painéis principais passam a usar as cores do design system da marca.

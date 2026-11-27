@@ -100,7 +100,7 @@ public partial class MainWindow
         if (vision.Count > 0) Metric("Visão/min", vision.Average(m => m.Vision!.Value * 60d / m.Duration).ToString("0.00", Pt));
         panel.Children.Add(metrics);
         panel.Children.Add(Text($"Calculado a partir do histórico disponível de {profile.RiotId} ({profile.Matches.Count} partidas consultadas).", 12, false, Muted));
-        var banner = new Grid {ClipToBounds=true,Background=Brush("#171B23")};
+        var banner = new Grid {ClipToBounds=true,Background=Theme("noite-painel")};
         if (champ != null)
         {
             var illustration = new Image();

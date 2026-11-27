@@ -13,13 +13,13 @@ public partial class MainWindow
         if(!wanted||snapshot.GameTime<=0){overlay?.Hide();return;}
         if(overlay is null){
             overlayContent=new StackPanel{Margin=new Thickness(14)};
-            overlay=new Window{Title="Bardola · Partida",Width=320,SizeToContent=SizeToContent.Height,MaxHeight=650,MinWidth=280,WindowStyle=WindowStyle.ToolWindow,ResizeMode=ResizeMode.CanResizeWithGrip,ShowInTaskbar=false,ShowActivated=false,Topmost=true,Background=Brush("#11171E"),Foreground=Brush("#ECEEF3"),Content=new ScrollViewer{Content=overlayContent},Left=18,Top=80};
+            overlay=new Window{Title="Bardola · Partida",Width=320,SizeToContent=SizeToContent.Height,MaxHeight=650,MinWidth=280,WindowStyle=WindowStyle.ToolWindow,ResizeMode=ResizeMode.CanResizeWithGrip,ShowInTaskbar=false,ShowActivated=false,Topmost=true,Background=Theme("noite-painel"),Foreground=Theme("papiro"),Content=new ScrollViewer{Content=overlayContent},Left=18,Top=80};
             overlay.Closing+=(_,e)=>{if(ready){e.Cancel=true;preferences.OverlayStats=preferences.OverlayBuild=preferences.OverlaySkills=preferences.OverlayRelics=false;_=SavePreferences();overlay.Hide();BuildResearch();}};
         }
         FillOverlay(overlayContent!);if(!overlay.IsVisible)overlay.Show();
     }
     void FillOverlay(StackPanel panel){
-        panel.Children.Clear();panel.Children.Add(Text("B A R D O L A",11,true,Accent));
+        panel.Children.Clear();panel.Children.Add(BrandBadge());
         panel.Children.Add(Text(catalog.Champions.FirstOrDefault(c=>c.Id==snapshot.ChampionId)?.Name??"Partida",19,true,top:8));
         if(preferences.OverlayStats){
             double rate=snapshot.Cs/Math.Max(1,snapshot.GameTime/60);

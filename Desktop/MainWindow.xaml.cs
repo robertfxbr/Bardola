@@ -44,7 +44,8 @@ public partial class MainWindow : Window
     CancellationTokenSource? accountRequest;
     int accountGeneration;
     DateTimeOffset lastAccountRefresh=DateTimeOffset.MinValue;
-    static readonly Brush Accent=Brush("#E8BC70"),Muted=Brush("#969DAB");
+    static Brush Accent => Theme("latao");
+    static Brush Muted => Theme("papiro-apagado");
 
     public MainWindow():this(new RemoteData()) {}
     public MainWindow(RemoteData remoteData,string? directory=null,Func<ILeagueApi>? apiFactory=null)
@@ -56,6 +57,7 @@ public partial class MainWindow : Window
         SourceInitialized+=(_,_)=>ghost.Protect(new System.Windows.Interop.WindowInteropHelper(this).Handle);
         importer=new ClientImporter(Path.Combine(dataRoot,"rune-backups"));leagueApiFactory=apiFactory??LeagueClient.Open;
         remote=remoteData;
+        ApplyBrandMode(preferences.GhostMode);
         InitializeComponent();
         Title="Bardola "+RunningVersion;VersionLabel.Text=RunningVersion;
         pollTimer.Tick+=async(_,_)=>await PollGame();
@@ -167,7 +169,7 @@ public partial class MainWindow : Window
     async void RefreshBuild(object sender,RoutedEventArgs e)
     {if(!ready)OnLoaded(sender,e);else await LoadBuild(true);}
     void Notice(string message,bool warn=false)
-    {BuildNotice.Text=message;NoticeBorder.Background=Brush(warn?"#382D22":"#18302F");BuildNotice.Foreground=Brush(warn?"#F1CE94":"#9CE2D1");}
+    {BuildNotice.Text=message;NoticeBorder.Background=Theme(warn?"argila-funda":"patina-funda");BuildNotice.Foreground=Theme(warn?"argila":"patina");}
 
     void RenderBuild()=>RenderBuildV2();
     Border ItemGroup(string number,string title,List<ItemChoice> items,bool sequence=false)=>ItemGroupV2(title,items,sequence);
@@ -193,7 +195,7 @@ public partial class MainWindow : Window
     FrameworkElement Ability(string key,JsonElement spell)
     {
         var t=Text(key+"   "+spell.GetProperty("name").GetString(),12,true,top:12);
-        t.ToolTip=new TextBlock{Text=BuildParsers.Clean(spell.GetProperty("description").GetString()??""),TextWrapping=TextWrapping.Wrap,MaxWidth=340,Foreground=Brush("#F1F5F9")};return t;
+        t.ToolTip=new TextBlock{Text=BuildParsers.Clean(spell.GetProperty("description").GetString()??""),TextWrapping=TextWrapping.Wrap,MaxWidth=340,Foreground=Theme("papiro")};return t;
     }
 
     async Task PollGame()
@@ -217,7 +219,7 @@ public partial class MainWindow : Window
         }catch(OperationCanceledException) {}finally{polling=false;}
     }
     void UpdateConnection()
-    {ConnectionText.Text=snapshot.Phase;ConnectionDot.Fill=Brush(snapshot.Connected?"#54E0BF":"#E0B96C");}
+    {ConnectionText.Text=snapshot.Phase;ConnectionDot.Fill=Theme(snapshot.Connected?"patina":"latao");}
     void ApplyDetection(bool initial=false)
     {
         var mode=GameService.DetectMode(snapshot.Mode,snapshot.Map);
@@ -332,12 +334,12 @@ public partial class MainWindow : Window
     {
         if(compact is not null){compact.Activate();return;}
         compactContent=new StackPanel{Margin=new Thickness(18)};
-        compact=new Window{Title="Bardola · Compacto",Width=480,Height=590,MinWidth=330,MinHeight=260,Background=Brush("#0B121C"),Foreground=Brush("#EAF0F6"),Topmost=true,ShowInTaskbar=true,Content=new ScrollViewer{Content=compactContent},Owner=this};
+        compact=new Window{Title="Bardola · Compacto",Width=480,Height=590,MinWidth=330,MinHeight=260,Background=Theme("noite"),Foreground=Theme("papiro"),Topmost=true,ShowInTaskbar=true,Content=new ScrollViewer{Content=compactContent},Owner=this};
         compact.Closed+=(_,_)=>{compact=null;compactContent=null;};UpdateCompact();compact.Show();
     }
     void UpdateCompact()
     {
-        if(compactContent is null)return;compactContent.Children.Clear();compactContent.Children.Add(Text("bardola  /  LEAGUE OF LEGENDS",11,true,Accent));
+        if(compactContent is null)return;compactContent.Children.Clear();compactContent.Children.Add(BrandBadge());
         if(selected is not null)compactContent.Children.Add(Text((catalog.Champions.FirstOrDefault(c=>c.Id==selected.ChampionId)?.Name??"")+" · "+ModeName(selected.Mode),20,true,top:10));
         if(current is null){compactContent.Children.Add(Text("Carregando ou aguardando uma build validada. Consulte o painel principal.",13,false,Muted,top:20));return;}
         var d=current.Document;var v=d.Variants[variantIndex];compactContent.Children.Add(Text(v.Name+" · patch "+d.Patch,11,false,Muted,top:8));
@@ -350,7 +352,7 @@ public partial class MainWindow : Window
     void ShowPage(UIElement target,Button nav,string title,string eyebrow)
     {foreach(var p in new UIElement[]{BuildPage,GamePage,SavedPage,ResearchPage,AccountPage,ChampionPage})p.Visibility=p==target?Visibility.Visible:Visibility.Collapsed;PageTitle.Text=title;PageEyebrow.Text=eyebrow;SetNav(nav);}
     void SetNav(Button nav)
-    {foreach(var b in new[]{BuildNav,ChampionNav,GameNav,AccountNav,SavedNav,ResearchNav}){b.Background=Brush("#171A21");b.Foreground=b==nav?Accent:Muted;b.BorderBrush=b==nav?Accent:Brush("#171A21");}}
+    {foreach(var b in new[]{BuildNav,ChampionNav,GameNav,AccountNav,SavedNav,ResearchNav}){b.Background=Theme("noite-painel");b.Foreground=b==nav?Accent:Muted;b.BorderBrush=b==nav?Accent:Theme("noite-painel");}}
     void ShowBuilds(object sender,RoutedEventArgs e)=>ShowPage(BuildPage,BuildNav,"Build do campeão","LEAGUE OF LEGENDS");
     void ShowGame(object sender,RoutedEventArgs e){ShowPage(GamePage,GameNav,"Partida","LEAGUE OF LEGENDS");RenderGame();}
     void ShowSaved(object sender,RoutedEventArgs e){ShowPage(SavedPage,SavedNav,"Seu repertório.","CAMPEÕES FAVORITOS");RenderSaved();}
@@ -371,9 +373,9 @@ public partial class MainWindow : Window
     static string TierName(string r)=>r switch{"emerald_plus"=>"Esmeralda+","diamond_plus"=>"Diamante+","master_plus"=>"Mestre+",_=>"Todos os elos"};
     static string ModeName(GameMode m)=>m switch{GameMode.Rift=>"Summoner's Rift",GameMode.Aram=>"ARAM",_=>"ARAM: Desordem"};
     static Brush Brush(string color)=>new SolidColorBrush((Color)ColorConverter.ConvertFromString(color));
-    static TextBlock Text(string value,int size=13,bool bold=false,Brush? color=null,int top=0)=>new(){Text=value,FontSize=size,FontWeight=bold?FontWeights.SemiBold:FontWeights.Normal,Foreground=color??Brush("#EAF0F6"),TextWrapping=TextWrapping.Wrap,Margin=new Thickness(0,top,0,0)};
-    static Border Card(UIElement child)=>new(){Background=Brush("#171B23"),BorderBrush=Brush("#272D38"),BorderThickness=new Thickness(1),CornerRadius=new CornerRadius(10),Padding=new Thickness(18),Margin=new Thickness(0,0,0,12),Child=child};
-    static Border Badge(string text)=>new(){Background=Brush("#2B2C2C"),CornerRadius=new CornerRadius(4),Padding=new Thickness(8,4,8,4),Margin=new Thickness(0,0,7,4),Child=Text(text,11,false,Brush("#D2C6AD"))};
+    static TextBlock Text(string value,int size=13,bool bold=false,Brush? color=null,int top=0)=>new(){Text=value,FontSize=size,FontWeight=bold?FontWeights.SemiBold:FontWeights.Normal,Foreground=color??Theme("papiro"),TextWrapping=TextWrapping.Wrap,Margin=new Thickness(0,top,0,0)};
+    static Border Card(UIElement child)=>new(){Background=Theme("noite-painel"),BorderBrush=Theme("linha"),BorderThickness=new Thickness(1),CornerRadius=new CornerRadius(10),Padding=new Thickness(18),Margin=new Thickness(0,0,0,12),Child=child};
+    static Border Badge(string text)=>new(){Background=Theme("noite-controle"),CornerRadius=new CornerRadius(4),Padding=new Thickness(8,4,8,4),Margin=new Thickness(0,0,7,4),Child=Text(text,11,false,Theme("papiro"))};
     static Button Button(string label,Action action,int top=0)
     {var b=new Button{Content=label,Margin=new Thickness(0,top,8,0)};b.Click+=(_,_)=>action();return b;}
     static void OpenUrl(string url)

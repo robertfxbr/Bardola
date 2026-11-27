@@ -40,6 +40,26 @@ static class Program
         Control<ComboBox>("ChampionBox").ItemsSource=catalog.Champions;Control<ComboBox>("ChampionBox").SelectedIndex=0;
         Control<ComboBox>("ModeBox").SelectedIndex=0;Control<ComboBox>("RoleBox").SelectedIndex=0;Control<ComboBox>("TierBox").SelectedIndex=0;
         var q=new BuildQuery(26,"zilean",GameMode.Rift,Patch:"16.23");
+        Check("ícone, símbolo e selo dos overlays acompanham o modo ghost",()=>{
+            var titleSymbol=Control<Image>("TitleBrandSymbol");
+            var normalIcon=window.Icon;
+            var normalSymbol=titleSymbol.Source;
+            True(normalIcon!=null && normalSymbol!=null);
+            var panel=new StackPanel();
+            Control<StackPanel>("ResearchDetails").Children.Add(panel);
+            Invoke("FillOverlay",panel);
+            var badge=(StackPanel)panel.Children[0];
+            var label=(TextBlock)badge.Children[1];
+            var symbol=(Image)badge.Children[0];
+            True(label.Text=="BARDOLA" && symbol.Source==normalSymbol);
+            Invoke("SetGhostMode",true);
+            try{
+                True(window.Icon!=null && window.Icon!=normalIcon);
+                True(titleSymbol.Source!=null && titleSymbol.Source!=normalSymbol);
+                True(label.Text=="GHOST" && symbol.Source==titleSymbol.Source);
+            }finally{Invoke("SetGhostMode",false);}
+            True(window.Icon==normalIcon && titleSymbol.Source==normalSymbol && label.Text=="BARDOLA");
+        });
         Check("modo ghost aplica a exclusão a janelas existentes e novas e restaura a captura",()=>{
             Invoke("BuildResearch");
             var toggle=Descendants<CheckBox>(Control<StackPanel>("ResearchDetails")).Single(c=>Equals(c.ToolTip,"Modo ghost"));
@@ -59,6 +79,7 @@ static class Program
         Check("modo ghost salvo protege novas janelas já na próxima inicialização",()=>{
             Set("ready",true);
             Invoke("SetGhostMode",true);
+            var savedGhostIcon=window.Icon;
             Pump((Task)Invoke("SavePreferences")!);
             var restartDirectory=Path.Combine(directory,"restart-ghost");
             Directory.CreateDirectory(restartDirectory);
@@ -69,7 +90,10 @@ static class Program
             using var probe=new GhostWindowProbe();
             True(probe.Affinity==0);
             var restarted=new MainWindow(new RemoteData(new EmptyHandler()),restartDirectory,()=>fakeClient);
-            try{True(probe.Affinity==0x11);}
+            try{
+                True(probe.Affinity==0x11);
+                True(restarted.Icon==savedGhostIcon);
+            }
             finally{
                 typeof(MainWindow).GetMethod("SetGhostMode",Flags)!.Invoke(restarted,[false]);
                 restarted.Close();

@@ -118,11 +118,12 @@ public partial class MainWindow
             }
             cardCanvas.Children.Clear();
             if(!CanShowGhostOverlay(cardOverlay))return;
+            AddGhostBadge(cardCanvas);
             if(!cardOverlay.IsVisible)cardOverlay.Show();
             SetWindowPos(new WindowInteropHelper(cardOverlay).Handle,new IntPtr(-1),bounds.X,bounds.Y,bounds.Width,bounds.Height,0x10);
             var dpi=VisualTreeHelper.GetDpi(cardOverlay);
             foreach(var hit in hits) {
-                var label=new Border{Background=Brush("#EF171B23"),CornerRadius=new CornerRadius(5),Padding=new Thickness(7,2,7,2),
+                var label=new Border{Background=Theme("noite-overlay"),CornerRadius=new CornerRadius(5),Padding=new Thickness(7,2,7,2),
                     Child=Text("Tier "+hit.Grade,14,true,hit.Grade=="S"?Accent:Brushes.White)};
                 label.Measure(new Size(double.PositiveInfinity,double.PositiveInfinity));
                 Canvas.SetLeft(label,((bounds.Width-band.PixelWidth)/2.0+hit.X)/dpi.DpiScaleX-label.DesiredSize.Width/2);

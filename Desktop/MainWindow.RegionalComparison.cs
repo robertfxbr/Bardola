@@ -30,7 +30,7 @@ public partial class MainWindow
         header.Children.Add(line);
         var info = Text("", 12, false, Muted);
         content.Children.Add(info);
-        page.Children.Add(new Expander {Header=header,Content=content,Foreground=Brush("#EAF0F6"),
+        page.Children.Add(new Expander {Header=header,Content=content,Foreground=Theme("papiro"),
             Padding=new Thickness(8,4,8,4),Background=Brush("#171C25"),Margin=new Thickness(0,3,0,0)});
         if (platform == null || match.TeamId is not (100 or 200) || champion == null)
         {

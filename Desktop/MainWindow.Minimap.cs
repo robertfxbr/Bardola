@@ -95,12 +95,13 @@ public partial class MainWindow
             mapOverlay.SourceInitialized+=(_,_)=>{var handle=new WindowInteropHelper(mapOverlay).Handle;SetStyle(handle,-20,GetStyle(handle,-20)|0x20|0x08000000|0x80);};
         }
         if(!CanShowGhostOverlay(mapOverlay))return;
+        AddGhostBadge(mapCanvas);
         if(!mapOverlay.IsVisible)mapOverlay.Show();
         SetWindowPos(new WindowInteropHelper(mapOverlay).Handle,new IntPtr(-1),bounds.X,bounds.Y,bounds.Width,bounds.Height,0x10);
         var dpi=VisualTreeHelper.GetDpi(mapOverlay);
         for(int i=0;i<4;i++)if(deadlines[i] is double end && end>snapshot.GameTime){
             int remaining=(int)Math.Ceiling(end-snapshot.GameTime);
-            var label=new Border{CornerRadius=new CornerRadius(5),Background=Brush("#E51A2129"),Padding=new Thickness(4,1,4,1),Child=Text(remaining.ToString(),13,true,remaining<=10?Brush("#71E3A9"):Brushes.White)};
+            var label=new Border{CornerRadius=new CornerRadius(5),Background=Theme("noite-overlay"),Padding=new Thickness(4,1,4,1),Child=Text(remaining.ToString(),13,true,remaining<=10?Brush("#71E3A9"):Brushes.White)};
             label.Measure(new Size(double.PositiveInfinity,double.PositiveInfinity));
             Canvas.SetLeft(label,bounds.Width*pads[i].X/dpi.DpiScaleX-label.DesiredSize.Width/2);
             Canvas.SetTop(label,(bounds.Height-bounds.Height/3+bounds.Height/3*pads[i].Y)/dpi.DpiScaleY-label.DesiredSize.Height/2);
@@ -116,7 +117,7 @@ public partial class MainWindow
         void Prompt(){int i=clicks.Count;prompt.Text=(i<4?"Clique no centro dos dígitos do placar":"Clique na posição da cura no minimapa")+" · "+padNames[i%4];}
         var panel=new DockPanel{Margin=new Thickness(12)};
         DockPanel.SetDock(prompt,Dock.Top);panel.Children.Add(prompt);panel.Children.Add(view);
-        var dialog=new Window{Title="Calibrar curas do ARAM",Width=Math.Min(1150,SystemParameters.WorkArea.Width),Height=380,Background=Brush("#171B23"),Content=panel,ShowActivated=false};
+        var dialog=new Window{Title="Calibrar curas do ARAM",Width=Math.Min(1150,SystemParameters.WorkArea.Width),Height=380,Background=Theme("noite-painel"),Content=panel,ShowActivated=false};
         calibrationWindow=dialog;Prompt();
         view.MouseLeftButtonDown+=(_,e)=>{
             var pos=e.GetPosition(view);

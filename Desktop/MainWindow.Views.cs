@@ -11,7 +11,7 @@ public partial class MainWindow
     {
         if(current is null)return;
         var doc=current.Document;var v=doc.Variants[variantIndex];BuildDetails.Children.Clear();RunePanel.Children.Clear();MatchupPanel.Children.Clear();SourcePanel.Children.Clear();
-        for(int i=0;i<VariantButtons.Children.Count;i++)if(VariantButtons.Children[i] is Button b){b.Background=i==variantIndex?Brush("#3B3224"):Brush("#1B2029");b.BorderBrush=i==variantIndex?Brush("#A98A53"):Brush("#333A47");b.Foreground=i==variantIndex?Accent:Muted;b.Padding=new Thickness(13,8,13,8);}
+        for(int i=0;i<VariantButtons.Children.Count;i++)if(VariantButtons.Children[i] is Button b){b.Background=i==variantIndex?Theme("latao-fundo"):Theme("noite-controle");b.BorderBrush=i==variantIndex?Accent:Theme("linha");b.Foreground=i==variantIndex?Accent:Muted;b.Padding=new Thickness(13,8,13,8);}
         if(v.PurchaseOrder is {Count:>0} order)BuildDetails.Children.Add(Card(ItemContent("Ordem de compra",order,true)));
         var corePanel=ItemContent(v.PurchaseOrder is null?"Itens principais":"Build final",v.Core,true);
         if(v.ArsenalSource is not null)corePanel.Children.Add(Text(v.ArsenalSource+" · "+v.Name,12,false,Accent,top:8));
@@ -61,7 +61,7 @@ public partial class MainWindow
     FrameworkElement RuneRow(IEnumerable<int> ids,bool primary)
     {
         var row=new WrapPanel{Margin=new Thickness(0,12,0,8)};
-        foreach(int id in ids){var info=catalog.Runes.GetValueOrDefault(id);var p=new StackPanel{Width=primary?78:76,Margin=new Thickness(0,0,5,0)};var img=new Image{Width=primary?42:35,Height=primary?42:35,HorizontalAlignment=HorizontalAlignment.Left};if(info?.Icon is {Length:>0} icon)LoadIcon(img,icon,request?.Token??default);p.Children.Add(img);var label=Text(info?.Name??$"Runa {id}",10,false,Brush("#D0D4DC"),top:6);label.MaxHeight=30;p.Children.Add(label);p.ToolTip=new TextBlock{Text=(info?.Name??"")+"\n\n"+(info?.Description??""),TextWrapping=TextWrapping.Wrap,MaxWidth=340,Foreground=Brush("#ECEEF3")};row.Children.Add(p);}return row;
+        foreach(int id in ids){var info=catalog.Runes.GetValueOrDefault(id);var p=new StackPanel{Width=primary?78:76,Margin=new Thickness(0,0,5,0)};var img=new Image{Width=primary?42:35,Height=primary?42:35,HorizontalAlignment=HorizontalAlignment.Left};if(info?.Icon is {Length:>0} icon)LoadIcon(img,icon,request?.Token??default);p.Children.Add(img);var label=Text(info?.Name??$"Runa {id}",10,false,Theme("papiro"),top:6);label.MaxHeight=30;p.Children.Add(label);p.ToolTip=new TextBlock{Text=(info?.Name??"")+"\n\n"+(info?.Description??""),TextWrapping=TextWrapping.Wrap,MaxWidth=340,Foreground=Theme("papiro")};row.Children.Add(p);}return row;
     }
     StackPanel ItemContent(string title,List<ItemChoice> items,bool core=false)
     {
@@ -72,7 +72,7 @@ public partial class MainWindow
             p.Children.Add(Text((info?.Name??$"Item {it.Id}")+(it.Count>1?" ×"+it.Count:""),core?12:11,true,top:8));
             if(info is not null)p.Children.Add(Text(info.Gold.ToString("N0",Pt)+" ouro",10,false,Brush("#BAA37A"),top:4));
             if(it.Games>0)p.Children.Add(Text($"{it.WinRate:0.0}% · {it.Games:N0} jogos",9,false,Muted,top:4));
-            if(info is not null)p.ToolTip=new TextBlock{Text=info.Name+"\n\n"+info.Description,TextWrapping=TextWrapping.Wrap,MaxWidth=340,Foreground=Brush("#ECEEF3")};wrap.Children.Add(p);
+            if(info is not null)p.ToolTip=new TextBlock{Text=info.Name+"\n\n"+info.Description,TextWrapping=TextWrapping.Wrap,MaxWidth=340,Foreground=Theme("papiro")};wrap.Children.Add(p);
         }panel.Children.Add(wrap);return panel;
     }
     Border ItemGroupV2(string title,List<ItemChoice> items,bool core=false)=>Card(ItemContent(title,items,core));

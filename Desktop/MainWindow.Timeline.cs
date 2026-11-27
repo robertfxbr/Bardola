@@ -13,7 +13,7 @@ public partial class MainWindow
         var panel=new DockPanel{Margin=new Thickness(18)};
         var status=Text("Carregando os eventos da partida…",13,false,Muted);
         DockPanel.SetDock(status,Dock.Top);panel.Children.Add(status);
-        var list=new ListBox{Margin=new Thickness(0,10,0,0),Background=Brush("#171B23"),Foreground=Brush("#ECEEF3")};
+        var list=new ListBox{Margin=new Thickness(0,10,0,0),Background=Theme("noite-painel"),Foreground=Theme("papiro")};
         panel.Children.Add(list);
         var dialog=new Window{Title="Linha do tempo · Bardola",Owner=this,Content=panel,Width=470,Height=450,
             Background=Brush("#141922"),WindowStartupLocation=WindowStartupLocation.CenterOwner};
