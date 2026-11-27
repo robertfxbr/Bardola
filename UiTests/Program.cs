@@ -96,6 +96,21 @@ static class Program
             Invoke("RenderAccount");var panel=Control<StackPanel>("AccountDetails");var texts=Descendants<TextBlock>(panel).Select(t=>t.Text).ToList();
             True(texts.Any(t=>t.Contains("Conta de teste#BR1")));True(texts.Any(t=>t.Contains("Ouro II")));True(texts.Any(t=>t.Contains("4/2/18")));
         });
+        Check("mais informações abre a ficha do campeão e filtra a fila",()=>{
+            var now=DateTimeOffset.UtcNow;
+            Set("account",new GameAccount("Conta#BR",82,1,"BR",[],[
+                new(3,26,"CLASSIC",true,4,0,20,30,1200,now,QueueId:420),
+                new(2,26,"ARAM",false,1,2,4,60,900,now.AddDays(-1),QueueId:450),
+                new(1,103,"ARAM",true,9,1,3,10,600,now.AddDays(-2),QueueId:450)]));
+            Invoke("RenderAccount");
+            var panel=Control<StackPanel>("AccountDetails");
+            Descendants<Button>(panel).First(b=>Equals(b.Content,"Mais informações do campeão")).RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+            True(Descendants<TextBlock>(panel).Any(t=>t.Text.Contains("50% · 1V 1D")));
+            var filter=Descendants<ComboBox>(panel).Single(b=>b.Items.Contains("Solo/Duo"));
+            filter.SelectedItem="Solo/Duo";
+            True(Descendants<TextBlock>(panel).Any(t=>t.Text=="100% · 1V 0D"));
+            True(Descendants<TextBlock>(panel).Any(t=>t.Text=="24,00"));
+        });
         Check("desconectar remove vínculo e limpa dados em memória",()=>{
             Set("account",new GameAccount("Teste#BR1",50,1,"BR",[],[]));var prefs=(Preferences)Get("preferences")!;prefs.LinkAccount=true;Invoke("DisconnectAccount");True(Get("account") is null);True(!prefs.LinkAccount);
         });
@@ -234,6 +249,25 @@ static class Program
                 var png=new PngBitmapEncoder();png.Frames.Add(BitmapFrame.Create(frame));using var file=File.Create(args[1]);png.Save(file);
             }
         });
+        if(args.Length==3 && args[0]=="--render-champion"){
+            string cache=Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),"Bardo.gg");
+            var currentAccount=new AccountService().ConnectAsync();Pump(currentAccount);
+            using var live=new RemoteData();
+            window.Close();
+            window=new MainWindow(live,directory);
+            Set("catalog",JsonSerializer.Deserialize<Catalog>(File.ReadAllText(Path.Combine(cache,"catalog.json")))!);
+            Set("catalogService",new CatalogService(cache,live));Set("account",currentAccount.Result);
+            Invoke("ShowAccount",window,new RoutedEventArgs());Invoke("OpenChampionProfile",int.Parse(args[1]));
+            Control<TextBlock>("AccountBadge").Text=currentAccount.Result.RiotId;
+            Control<TextBlock>("ConnectionText").Text="Histórico local";
+            var view=(FrameworkElement)window.Content;
+            view.Measure(new Size(1240,780));view.Arrange(new Rect(0,0,1240,780));view.UpdateLayout();
+            var regionPanel=Descendants<Expander>(Control<StackPanel>("AccountDetails")).Single();
+            regionPanel.IsExpanded=true;
+            Pump(Task.Delay(1200));view.UpdateLayout();
+            var frame=new RenderTargetBitmap(1240,780,96,96,PixelFormats.Pbgra32);frame.Render(view);
+            var png=new PngBitmapEncoder();png.Frames.Add(BitmapFrame.Create(frame));using var file=File.Create(args[2]);png.Save(file);
+        }
         if(args.Length==2 && args[0]=="--render-profile"){
             string cache=Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),"Bardo.gg");
             Set("catalog",JsonSerializer.Deserialize<Catalog>(File.ReadAllText(Path.Combine(cache,"catalog.json")))!);

@@ -46,10 +46,7 @@ public partial class MainWindow
         profileLookup=request;
         publicProfile=null;lookupMessage="Buscando perfil e histórico no Brasil…";RenderAccount();
         try{
-            var endpoint=Environment.GetEnvironmentVariable("BARDO_API_URL")??"http://127.0.0.1:5219";
-            if(!Uri.TryCreate(endpoint,UriKind.Absolute,out var host) || host.UserInfo.Length!=0 ||
-                !(host.Scheme=="https" || host.Scheme=="http" && host.IsLoopback))throw new InvalidDataException();
-            var uri=new Uri(host,"/v1/br1/profile?riotId="+Uri.EscapeDataString(name+"#"+tag));
+            var uri=BardoApiUri("/v1/br1/profile?riotId="+Uri.EscapeDataString(name+"#"+tag));
             byte[] json=await remote.BytesAsync(uri.AbsoluteUri,512_000,request.Token);
             var found=JsonSerializer.Deserialize<GameAccount>(json,JsonSerializerOptions.Web);
             if(found?.Ranks is null || found.Matches is null || string.IsNullOrWhiteSpace(found.RiotId))throw new InvalidDataException();
@@ -61,11 +58,19 @@ public partial class MainWindow
             lookupMessage=e switch {
                 HttpRequestException {StatusCode:HttpStatusCode.NotFound}=>"Perfil de League não encontrado no Brasil. Confira o nome e a tag.",
                 HttpRequestException {StatusCode:HttpStatusCode.TooManyRequests}=>"Limite de consultas atingido. Tente novamente em instantes.",
-                HttpRequestException {StatusCode:HttpStatusCode.ServiceUnavailable}=>"A API do Bardo está sem acesso à Riot no momento.",
-                _=>"Não foi possível consultar a API do Bardo. Tente novamente mais tarde."
+                HttpRequestException {StatusCode:HttpStatusCode.ServiceUnavailable}=>"A API do Bardola está sem acesso à Riot no momento.",
+                _=>"Não foi possível consultar a API do Bardola. Tente novamente mais tarde."
             };
         }finally{
             if(profileLookup==request){profileLookup=null;if(!lifetime.IsCancellationRequested)RenderAccount();}
         }
+    }
+
+    static Uri BardoApiUri(string path)
+    {
+        var endpoint=Environment.GetEnvironmentVariable("BARDO_API_URL")??"http://127.0.0.1:5219";
+        if(!Uri.TryCreate(endpoint,UriKind.Absolute,out var host) || host.UserInfo.Length!=0 ||
+            !(host.Scheme=="https" || host.Scheme=="http" && host.IsLoopback))throw new InvalidDataException();
+        return new Uri(host,path);
     }
 }

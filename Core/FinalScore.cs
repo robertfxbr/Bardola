@@ -19,6 +19,8 @@ public static class FinalScore
             Number(stats["NUM_DEATHS"])??0,Number(stats["ASSISTS"])??0,(Number(stats["MINIONS_KILLED"])??0)+(Number(stats["NEUTRAL_MINIONS_KILLED"])??0),
             duration,DateTimeOffset.MinValue,Number(stats["TOTAL_DAMAGE_DEALT_TO_CHAMPIONS"]),Number(stats["TOTAL_DAMAGE_TAKEN"]),
             Number(stats["TOTAL_HEAL_ON_TEAMMATES"])+Number(stats["TOTAL_DAMAGE_SHIELDED_ON_TEAMMATES"]),
-            (player["items"] as JsonArray)?.Select(i=>Number(i)??0).Where(id=>id>0).ToList(),MatchRoster.FromEnd(response,owner));
+            (player["items"] as JsonArray)?.Select(i=>Number(i)??0).Where(id=>id>0).ToList(),MatchRoster.FromEnd(response,owner),
+            response["platformId"]?.ToString(),Number(player["teamId"])??0,Number(response["queueId"])??0,
+            Number(stats["GOLD_EARNED"]),Number(stats["VISION_SCORE"]));
     }
 }

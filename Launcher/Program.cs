@@ -18,7 +18,10 @@ try{
     bool needsBootstrap;
     try{manager.Executable();needsBootstrap=false;}
     catch(Exception e) when(e is IOException or InvalidDataException or System.Security.Cryptography.CryptographicException or JsonException){needsBootstrap=true;}
-    if(needsBootstrap){
+    string self=Environment.ProcessPath??throw new InvalidOperationException("Executável não encontrado.");
+    string launcher=Path.Combine(root,"Bardola.exe");
+    bool installing=!Path.GetFullPath(self).Equals(launcher,StringComparison.OrdinalIgnoreCase);
+    if(needsBootstrap || installing){
         string scratch=Path.Combine(root,".bootstrap-"+Guid.NewGuid().ToString("N"));Directory.CreateDirectory(scratch);
         try{
             var assembly=Assembly.GetExecutingAssembly();
@@ -26,7 +29,7 @@ try{
                 string filename=name["Bootstrap.".Length..];if(Path.GetFileName(filename)!=filename)throw new InvalidDataException("Recurso inválido.");
                 using var input=assembly.GetManifestResourceStream(name)!;using var output=File.Create(Path.Combine(scratch,filename));await input.CopyToAsync(output);
             }
-            await new UpdateManager(root,scratch,ReleaseTrust.PublicKey).CheckAsync();
+            await new UpdateManager(root,scratch,ReleaseTrust.PublicKey).CheckAsync(reinstallSignedBuild:installing);
             try{manager.Executable();}
             catch(Exception e) when(e is IOException or InvalidDataException or System.Security.Cryptography.CryptographicException or JsonException){
                 try{await manager.CheckAsync();manager.Executable();}
@@ -36,12 +39,10 @@ try{
     }
     manager.Executable(); // Instalação só informa sucesso depois de validar o executável.
     BardoPaths.MigrateLegacyData(root);
-    string self=Environment.ProcessPath??throw new InvalidOperationException("Executável não encontrado.");
-    string launcher=Path.Combine(root,"Bardo.gg.exe");
-    if(!Path.GetFullPath(self).Equals(launcher,StringComparison.OrdinalIgnoreCase)){
+    if(installing){
         string staged=launcher+".new";File.Copy(self,staged,true);File.Move(staged,launcher,true);
     }
-    if(Arg("--root") is null)CreateShortcuts(launcher);
+    if(Arg("--root") is null)BardolaShortcuts.Update(launcher);
     await File.WriteAllTextAsync(log,JsonSerializer.Serialize(new{installed=true,version=manager.Current()?.Version,launcher}));
     if(args.Contains("--install-only"))return 0;
     string executable;
@@ -50,25 +51,8 @@ try{
     return 0;
 }catch(Exception e){
     try{await File.WriteAllTextAsync(log,JsonSerializer.Serialize(new{error=e.Message}));}catch{}
-    if(!args.Contains("--install-only")&&!args.Contains("--check-only"))MessageBoxW(IntPtr.Zero,"Não foi possível abrir o Bardo.gg. "+e.Message,"Bardo.gg",0x10);
+    if(!args.Contains("--install-only")&&!args.Contains("--check-only"))MessageBoxW(IntPtr.Zero,"Não foi possível abrir o Bardola. "+e.Message,"Bardola",0x10);
     return 1;
 }
 
-static void CreateShortcuts(string target){
-    foreach(string folder in new[]{Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory),Environment.GetFolderPath(Environment.SpecialFolder.Programs)}){
-        if(string.IsNullOrWhiteSpace(folder))continue;
-        object? shell=null,link=null;
-        try{
-            var type=Type.GetTypeFromProgID("WScript.Shell");if(type is null)continue;shell=Activator.CreateInstance(type);
-            string path=Path.Combine(folder,"Bardo.gg.lnk");
-            link=type.InvokeMember("CreateShortcut",BindingFlags.InvokeMethod,null,shell,[path]);
-            var t=link!.GetType();
-            if(File.Exists(path)){
-                string old=(string?)t.InvokeMember("TargetPath",BindingFlags.GetProperty,null,link,null)??"";
-                if(!old.Equals(target,StringComparison.OrdinalIgnoreCase))continue;
-            }
-            t.InvokeMember("TargetPath",BindingFlags.SetProperty,null,link,[target]);t.InvokeMember("WorkingDirectory",BindingFlags.SetProperty,null,link,[Path.GetDirectoryName(target)]);t.InvokeMember("Description",BindingFlags.SetProperty,null,link,["Bardo.gg · League of Legends"]);t.InvokeMember("Save",BindingFlags.InvokeMethod,null,link,null);
-        }catch(COMException){}finally{if(link is not null)Marshal.ReleaseComObject(link);if(shell is not null)Marshal.ReleaseComObject(shell);}
-    }
-}
 [DllImport("user32.dll",CharSet=CharSet.Unicode)]static extern int MessageBoxW(IntPtr hwnd,string text,string caption,uint type);

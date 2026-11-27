@@ -21,7 +21,7 @@ public sealed class UpdateManager(string installation,string feed,string publicK
     }
     public string Executable()
     {
-        var current=Current()??throw new InvalidDataException("Nenhuma versão válida do Bardo.gg está instalada.");
+        var current=Current()??throw new InvalidDataException("Nenhuma versão válida do Bardola está instalada.");
         return VerifiedExecutable(current.Version);
     }
     public string? ReadyVersionAfter(Version running)
@@ -30,7 +30,7 @@ public sealed class UpdateManager(string installation,string feed,string publicK
         if(installed is null || Version.Parse(installed.Version)<=running)return null;
         return IsUsable(installed.Version)?installed.Version:null;
     }
-    public async Task<UpdateResult> CheckAsync(CancellationToken ct=default)
+    public async Task<UpdateResult> CheckAsync(CancellationToken ct=default,bool reinstallSignedBuild=false)
     {
         ct.ThrowIfCancellationRequested();Directory.CreateDirectory(Root);
         using var mutex=await Lock(ct);
@@ -42,7 +42,8 @@ public sealed class UpdateManager(string installation,string feed,string publicK
         catch(JsonException e){throw new InvalidDataException("Manifesto de atualização inválido.",e);}
         ReleaseSecurity.Verify(release,publicKey);
         var next=ReleaseSecurity.Version(release.Version)!;var installed=current is null?null:ReleaseSecurity.Version(current.Version);
-        if(installed is not null && (next<installed || (next==installed && IsUsable(current!.Version))))return new(false,current!.Version,"Bardo.gg está atualizado.");
+        if(installed is not null && (next<installed || (next==installed && IsUsable(current!.Version)
+            && (!reinstallSignedBuild || ReadInstalled(current.Version).Sha256==release.Sha256))))return new(false,current!.Version,"Bardola está atualizado.");
         byte[] package=await Read(release.Package,MaxPackage,ct);
         if(package.LongLength!=release.Size || !ReleaseSecurity.Hash(package).Equals(release.Sha256,StringComparison.OrdinalIgnoreCase))throw new InvalidDataException("O pacote não passou na verificação de integridade.");
         string versions=Path.Combine(Root,"app-versions");Directory.CreateDirectory(versions);
@@ -92,7 +93,7 @@ public sealed class UpdateManager(string installation,string feed,string publicK
     {
         if(Uri.TryCreate(feed,UriKind.Absolute,out var uri)&&uri.Scheme=="https"){
             var url=name=="latest.json"?uri:new Uri(uri,name);using var budget=CancellationTokenSource.CreateLinkedTokenSource(ct);budget.CancelAfter(TimeSpan.FromSeconds(45));
-            using var http=new HttpClient{Timeout=Timeout.InfiniteTimeSpan};http.DefaultRequestHeaders.UserAgent.ParseAdd("Bardo.gg-Updater/1.0");
+            using var http=new HttpClient{Timeout=Timeout.InfiniteTimeSpan};http.DefaultRequestHeaders.UserAgent.ParseAdd("Bardola-Updater/1.0");
             using var response=await http.GetAsync(url,HttpCompletionOption.ResponseHeadersRead,budget.Token);response.EnsureSuccessStatusCode();if(response.RequestMessage?.RequestUri?.Scheme!="https"||response.Content.Headers.ContentLength>limit)throw new InvalidDataException("Download de atualização inválido.");
             await using var input=await response.Content.ReadAsStreamAsync(budget.Token);using var output=new MemoryStream();byte[] buffer=new byte[81920];int n;while((n=await input.ReadAsync(buffer,budget.Token))>0){if(output.Length+n>limit)throw new InvalidDataException("Atualização excede o limite de tamanho.");await output.WriteAsync(buffer.AsMemory(0,n),budget.Token);}return output.ToArray();
         }
@@ -112,7 +113,7 @@ public static class ReleasePublisher
     {
         if(ReleaseSecurity.Version(version) is null)throw new InvalidDataException("Use uma versão como 0.3.1.");
         string exe=Path.Combine(appDirectory,"BardoApp.exe");if(!File.Exists(exe))throw new InvalidDataException("BardoApp.exe não foi compilado.");
-        Directory.CreateDirectory(feedDirectory);string name=$"bardo-{version}.zip",path=Path.Combine(feedDirectory,name),temp=Path.Combine(feedDirectory,Guid.NewGuid()+".tmp");
+        Directory.CreateDirectory(feedDirectory);string name=$"bardola-{version}.zip",path=Path.Combine(feedDirectory,name),temp=Path.Combine(feedDirectory,Guid.NewGuid()+".tmp");
         try{
             using(var zip=ZipFile.Open(temp,ZipArchiveMode.Create))foreach(var file in Directory.EnumerateFiles(appDirectory,"*",SearchOption.AllDirectories).Order()){
                 string relative=Path.GetRelativePath(appDirectory,file).Replace('\\','/');if(Path.GetExtension(file).Equals(".pdb",StringComparison.OrdinalIgnoreCase))continue;

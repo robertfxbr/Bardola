@@ -30,6 +30,12 @@ public partial class MainWindow
             }catch(HttpRequestException e) when(e.StatusCode==System.Net.HttpStatusCode.NotFound){}
             if(score is null && preferences.LinkAccount)score=account?.Matches.FirstOrDefault(m=>m.Id==id &&
                 account.RiotId==string.Concat(owner?["gameName"],"#",owner?["tagLine"]));
+            if(score is not null && string.IsNullOrWhiteSpace(score.Platform)){
+                try {
+                    var region=await api.GetAsync("/riotclient/region-locale",token);
+                    score=score with{Platform=LeaguePlatform.Find(region?["region"]?.ToString())?.Id};
+                }catch(Exception e) when(e is HttpRequestException or InvalidDataException or System.Text.Json.JsonException){}
+            }
             if(score is null || token.IsCancellationRequested || (await api.GetAsync("/lol-gameflow/v1/gameflow-phase",token))?.ToString()!="EndOfGame")return;
             finalScore=score;
             ShowGame(this,new RoutedEventArgs());
@@ -146,6 +152,7 @@ public partial class MainWindow
         timeline.HorizontalAlignment=HorizontalAlignment.Right;timeline.VerticalAlignment=VerticalAlignment.Top;
         timeline.Margin=new Thickness(0,10,12,0);hero.Children.Add(timeline);
         surface.Children.Add(hero);
+        AddRegionalComparison(surface,match,champion);
 
         if(teams.Count>0){
             var board=new System.Windows.Controls.Primitives.UniformGrid{Columns=2,Margin=new Thickness(0,10,0,0)};

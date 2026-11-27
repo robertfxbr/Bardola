@@ -34,7 +34,7 @@ public partial class MainWindow
             foreach(int id in page.Perks.Skip(6)){var info=catalog.Runes.GetValueOrDefault(id);var badge=Badge(info?.Name??$"Runa {id}");badge.ToolTip=info?.Description;wrap.Children.Add(badge);}shards.Children.Add(wrap);Grid.SetColumn(shards,1);lower.Children.Add(shards);runes.Children.Add(lower);
         }else {
             runes.Children.Add(Text(doc.Query.Mode==GameMode.Mayhem?"SEM RUNAS NESTE MODO":"RUNAS INDISPONÍVEIS",12,true,Accent,top:18));
-            runes.Children.Add(Text(doc.Query.Mode==GameMode.Mayhem?"Desordem desativa runas. A importação automática envia os itens e preserva sua página.":"A fonte não retornou uma página validada. O Bardo.gg não vai substituir suas runas por uma sugestão incompleta.",12,false,Muted,top:10));
+            runes.Children.Add(Text(doc.Query.Mode==GameMode.Mayhem?"Desordem desativa runas. A importação automática envia os itens e preserva sua página.":"A fonte não retornou uma página validada. O Bardola não vai substituir suas runas por uma sugestão incompleta.",12,false,Muted,top:10));
         }
         var spells=new StackPanel();spells.Children.Add(Text("Feitiços de invocador",17,true));
         if(v.SummonerSpells is {Count:2}){
@@ -90,8 +90,13 @@ public partial class MainWindow
         var profile=publicProfile??account??saved;
         var top=new StackPanel();
         AccountDetails.Children.Clear();
+        if(profile is not null && profileChampion.HasValue && profile.Matches.Count>0 && profileOwner==profile.Region+"/"+profile.RiotId){
+            AccountDetails.Children.Add(Text($"{profile.RiotId}   ·   {profile.Region}   ·   Nível {profile.Level}",16,true));
+            AddChampionProfileNavigation(profile);
+            return;
+        }
         top.Children.Add(Text(profile?.RiotId??"Perfil e histórico",29,true));
-        string source=publicProfile is not null?"Perfil público · API do Bardo.gg":account is not null?"Cliente do LoL":
+        string source=publicProfile is not null?"Perfil público · API do Bardola":account is not null?"Cliente do LoL":
             $"Salvo neste PC · {preferences.ProfileSavedAt?.ToLocalTime():dd/MM/yyyy HH:mm}";
         top.Children.Add(Text(profile is null?"Conecte a conta aberta no cliente ou consulte um Riot ID com o LoL fechado.":
             $"Nível {profile.Level}  ·  {profile.Region}  ·  {source}",13,false,Muted,top:8));
@@ -104,6 +109,7 @@ public partial class MainWindow
             top.Children.Add(Text(accountMessage,11,false,Muted,top:7));
         AddProfileLookup(top);AccountDetails.Children.Add(Card(top));
         if(profile is null)return;
+        if(AddChampionProfileNavigation(profile))return;
         var layout=new Grid();layout.ColumnDefinitions.Add(new(){Width=new GridLength(250)});layout.ColumnDefinitions.Add(new(){Width=new GridLength(18)});layout.ColumnDefinitions.Add(new());
         var ranks=new StackPanel();foreach(var rank in profile.Ranks){var p=new StackPanel();p.Children.Add(Text(rank.Queue=="RANKED_SOLO_5x5"?"RANQUEADA SOLO / DUO":"RANQUEADA FLEX",10,true,Muted));p.Children.Add(Text(RankName(rank.Tier)+" "+rank.Division,25,true,Accent,top:12));p.Children.Add(Text($"{rank.Points} PdL   ·   {rank.Wins}V / {rank.Losses}D",12,false,Muted,top:8));ranks.Children.Add(Card(p));}if(profile.Ranks.Count==0)ranks.Children.Add(Card(Text("Sem classificação disponível.",13,false,Muted)));layout.Children.Add(ranks);
         var history=new StackPanel();history.Children.Add(Text("Histórico recente",19,true));history.Children.Add(Text(profile.HistoryMessage,11,false,Muted,top:6));
@@ -112,6 +118,7 @@ public partial class MainWindow
                 var portrait=new Image{Width=45,Height=45,HorizontalAlignment=HorizontalAlignment.Left,VerticalAlignment=VerticalAlignment.Top};if(c is not null)LoadIcon(portrait,$"https://ddragon.leagueoflegends.com/cdn/{catalog.Version}/img/champion/{c.Key}.png",lifetime.Token);grid.Children.Add(portrait);
                 var body=new StackPanel();body.Children.Add(Text((match.Win?"Vitória":"Derrota")+"   ·   "+(c?.Name??"Campeão"),15,true,Brush(match.Win?"#3AD4C0":"#EB8977")));body.Children.Add(Text(ModeLabel(match.Mode)+"   ·   "+TimeSpan.FromSeconds(match.Duration).ToString(@"mm\:ss")+(match.At>DateTimeOffset.MinValue?"   ·   "+LocalTime(match.At):""),11,false,Muted,top:7));Grid.SetColumn(body,1);grid.Children.Add(body);
                 var stats=new StackPanel{HorizontalAlignment=HorizontalAlignment.Right};stats.Children.Add(Text($"{match.Kills}/{match.Deaths}/{match.Assists}",20,true));stats.Children.Add(Text($"{match.Cs} CS",11,false,Muted,top:7));Grid.SetColumn(stats,2);grid.Children.Add(stats);
+                body.Children.Add(Button("Mais informações do campeão",()=>OpenChampionProfile(match.ChampionId)));
                 var card=Card(grid);card.Margin=new Thickness(0,12,0,0);card.Background=Brush(match.Win?"#172326":"#271E22");card.BorderBrush=Brush(match.Win?"#26413E":"#49302E");history.Children.Add(card);
             }
         }else history.Children.Add(Card(Text("Nenhuma partida disponível nesta consulta.",13,false,Muted)));Grid.SetColumn(history,2);layout.Children.Add(history);AccountDetails.Children.Add(layout);

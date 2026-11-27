@@ -53,7 +53,7 @@ public partial class MainWindow : Window
         importer=new ClientImporter(Path.Combine(dataRoot,"rune-backups"));leagueApiFactory=apiFactory??LeagueClient.Open;
         remote=remoteData;
         InitializeComponent();
-        Title="Bardo.gg "+RunningVersion;VersionLabel.Text=RunningVersion;
+        Title="Bardola "+RunningVersion;VersionLabel.Text=RunningVersion;
         pollTimer.Tick+=async(_,_)=>await PollGame();
         selectionTimer.Tick+=async(_,_)=>{selectionTimer.Stop();await LoadBuild();};
     }
@@ -155,7 +155,7 @@ public partial class MainWindow : Window
             if(token.IsCancellationRequested || selected!=query)return;
             Notice("Não foi possível carregar uma build validada deste contexto. "+Friendly(e),true);
             var panel=new StackPanel();panel.Children.Add(Text("Sua seleção foi preservada.",16,true));
-            panel.Children.Add(Text("Tente novamente ou consulte a página original. O Bardo.gg não vai preencher esta tela com uma build de outro modo.",12,false,Muted,top:10));
+            panel.Children.Add(Text("Tente novamente ou consulte a página original. O Bardola não vai preencher esta tela com uma build de outro modo.",12,false,Muted,top:10));
             panel.Children.Add(Button("Consultar fonte original ↗",()=>OpenUrl(BuildParsers.Url(query)),top:14));BuildDetails.Children.Add(Card(panel));
             UpdateCompact();
         }
@@ -310,7 +310,7 @@ public partial class MainWindow : Window
     {
         ++accountGeneration;accountRequest?.Cancel();accountBusy=false;account=null;preferences.LinkAccount=false;
         ClearPublicProfile();preferences.SavedProfile=null;preferences.ProfileSavedAt=null;AccountBadge.Text="Ainda não conectada";
-        accountMessage="Conta desconectada do Bardo.gg. Sua sessão no LoL continua aberta.";_=SavePreferences();RenderAccount();
+        accountMessage="Conta desconectada do Bardola. Sua sessão no LoL continua aberta.";_=SavePreferences();RenderAccount();
     }
     void RenderAccount()=>RenderAccountV2();
     static string RankName(string tier)=>tier switch {"IRON"=>"Ferro","BRONZE"=>"Bronze","SILVER"=>"Prata","GOLD"=>"Ouro","PLATINUM"=>"Platina","EMERALD"=>"Esmeralda","DIAMOND"=>"Diamante","MASTER"=>"Mestre","GRANDMASTER"=>"Grão-Mestre","CHALLENGER"=>"Desafiante",_=>"Sem classificação"};
@@ -319,7 +319,7 @@ public partial class MainWindow : Window
     void ExportBuild(object sender,RoutedEventArgs e)
     {
         if(current is null)return;
-        var d=current.Document;var dialog=new SaveFileDialog{Filter="Conjunto de itens do LoL (*.json)|*.json",FileName=$"Bardo-{d.Query.Slug}-{d.Query.Mode}-{d.Patch}.json"};
+        var d=current.Document;var dialog=new SaveFileDialog{Filter="Conjunto de itens do LoL (*.json)|*.json",FileName=$"Bardola-{d.Query.Slug}-{d.Query.Mode}-{d.Patch}.json"};
         if(dialog.ShowDialog()!=true)return;
         try{File.WriteAllText(dialog.FileName,ExportService.CreateItemSet(d,d.Variants[variantIndex]));Notice("Conjunto exportado. No LoL, abra Coleção → Itens → Importar conjunto de itens.");}
         catch(Exception err) when(err is IOException or UnauthorizedAccessException){Notice("Não foi possível salvar o arquivo. Escolha outra pasta.",true);}
@@ -329,12 +329,12 @@ public partial class MainWindow : Window
     {
         if(compact is not null){compact.Activate();return;}
         compactContent=new StackPanel{Margin=new Thickness(18)};
-        compact=new Window{Title="Bardo.gg · Compacto",Width=480,Height=590,MinWidth=330,MinHeight=260,Background=Brush("#0B121C"),Foreground=Brush("#EAF0F6"),Topmost=true,ShowInTaskbar=true,Content=new ScrollViewer{Content=compactContent},Owner=this};
+        compact=new Window{Title="Bardola · Compacto",Width=480,Height=590,MinWidth=330,MinHeight=260,Background=Brush("#0B121C"),Foreground=Brush("#EAF0F6"),Topmost=true,ShowInTaskbar=true,Content=new ScrollViewer{Content=compactContent},Owner=this};
         compact.Closed+=(_,_)=>{compact=null;compactContent=null;};UpdateCompact();compact.Show();
     }
     void UpdateCompact()
     {
-        if(compactContent is null)return;compactContent.Children.Clear();compactContent.Children.Add(Text("bardo.gg  /  LEAGUE OF LEGENDS",11,true,Accent));
+        if(compactContent is null)return;compactContent.Children.Clear();compactContent.Children.Add(Text("bardola  /  LEAGUE OF LEGENDS",11,true,Accent));
         if(selected is not null)compactContent.Children.Add(Text((catalog.Champions.FirstOrDefault(c=>c.Id==selected.ChampionId)?.Name??"")+" · "+ModeName(selected.Mode),20,true,top:10));
         if(current is null){compactContent.Children.Add(Text("Carregando ou aguardando uma build validada. Consulte o painel principal.",13,false,Muted,top:20));return;}
         var d=current.Document;var v=d.Variants[variantIndex];compactContent.Children.Add(Text(v.Name+" · patch "+d.Patch,11,false,Muted,top:8));
@@ -351,7 +351,7 @@ public partial class MainWindow : Window
     void ShowBuilds(object sender,RoutedEventArgs e)=>ShowPage(BuildPage,BuildNav,"Build do campeão","LEAGUE OF LEGENDS");
     void ShowGame(object sender,RoutedEventArgs e){ShowPage(GamePage,GameNav,"Partida","LEAGUE OF LEGENDS");RenderGame();}
     void ShowSaved(object sender,RoutedEventArgs e){ShowPage(SavedPage,SavedNav,"Seu repertório.","CAMPEÕES FAVORITOS");RenderSaved();}
-    void ShowResearch(object sender,RoutedEventArgs e){BuildResearch();ShowPage(ResearchPage,ResearchNav,"Configurações","PREFERÊNCIAS DO BARDO.GG");}
+    void ShowResearch(object sender,RoutedEventArgs e){BuildResearch();ShowPage(ResearchPage,ResearchNav,"Configurações","PREFERÊNCIAS DO BARDOLA");}
     void ShowAccount(object sender,RoutedEventArgs e){ShowPage(AccountPage,AccountNav,"Perfil e histórico","LEAGUE OF LEGENDS");RenderAccount();}
     void OnClosed(object? sender,EventArgs e)
     {ready=false;cardPoll.Stop();cardOverlay?.Close();relicPoll.Stop();ClearRelicReadings();mapOverlay?.Close();calibrationWindow?.Close();pollTimer.Stop();selectionTimer.Stop();updateTimer.Stop();lifetime.Cancel();nativeTimerRequest?.Cancel();overlay?.Close();request?.Cancel();accountRequest?.Cancel();importRequest?.Cancel();compact?.Close();remote.Dispose();game.Dispose();lifetime.Dispose();}
@@ -374,7 +374,7 @@ public partial class MainWindow : Window
     static Button Button(string label,Action action,int top=0)
     {var b=new Button{Content=label,Margin=new Thickness(0,top,8,0)};b.Click+=(_,_)=>action();return b;}
     static void OpenUrl(string url)
-    {try{if(Uri.TryCreate(url,UriKind.Absolute,out var uri) && uri.Scheme=="https")System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(url){UseShellExecute=true});}catch(System.ComponentModel.Win32Exception){MessageBox.Show("Não foi possível abrir o navegador.","Bardo.gg");}}
+    {try{if(Uri.TryCreate(url,UriKind.Absolute,out var uri) && uri.Scheme=="https")System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(url){UseShellExecute=true});}catch(System.ComponentModel.Win32Exception){MessageBox.Show("Não foi possível abrir o navegador.","Bardola");}}
     static IEnumerable<(string,string)> SourceLinks(BuildQuery q)
     {
         if(q.Mode==GameMode.Mayhem) {

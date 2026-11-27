@@ -25,7 +25,7 @@ public partial class MainWindow
             // Uma cópia de desenvolvimento não deve alterar uma instalação de produção.
             string running=Path.GetFullPath(Environment.ProcessPath??"");
             if(!running.StartsWith(Path.Combine(BardoPaths.Root,"app-versions")+Path.DirectorySeparatorChar,StringComparison.OrdinalIgnoreCase)){
-                SetUpdateStatus("Use o instalador Bardo.gg para ativar as atualizações automáticas.");return;
+                SetUpdateStatus("Use o instalador Bardola para ativar as atualizações automáticas.");return;
             }
             var manager=new UpdateManager(BardoPaths.Root,ReleaseTrust.Feed,ReleaseTrust.PublicKey);
             var result=await Task.Run(async ()=>{
@@ -62,7 +62,7 @@ public partial class MainWindow
             }
             using var next=Process.Start(new ProcessStartInfo(executable){
                 WorkingDirectory=Path.GetDirectoryName(executable)!,UseShellExecute=false,ArgumentList={"--after-update"}
-            })??throw new IOException("Falha ao iniciar o Bardo.gg.");
+            })??throw new IOException("Falha ao iniciar o Bardola.");
             Application.Current.Shutdown();
         }catch(OperationCanceledException) when(lifetime.IsCancellationRequested){}
         catch(Exception e) when(e is IOException or InvalidDataException or UnauthorizedAccessException or System.ComponentModel.Win32Exception or System.Security.Cryptography.CryptographicException or System.Text.Json.JsonException){
@@ -84,7 +84,7 @@ public partial class MainWindow
         DockPanel.SetDock(updateButton,Dock.Right);
         updates.Children.Add(updateButton);
         var version=new StackPanel();
-        version.Children.Add(Text("Bardo.gg · "+RunningVersion,18,true));
+        version.Children.Add(Text("Bardola · "+RunningVersion,18,true));
         updateStatus=Text(updateMessage,13,false,Muted,top:6);
         version.Children.Add(updateStatus);
         updates.Children.Add(version);
@@ -111,8 +111,8 @@ public partial class MainWindow
         Tile(2,"Q  W  E","Prioridade de habilidades","Consulta à prioridade da build, com campeão e fonte conferidos.",preferences.OverlaySkills,v=>{preferences.OverlaySkills=v;_=SavePreferences();UpdateOverlay();});
         var goal=new StackPanel();goal.Children.Add(Text("◎",26,true,Accent));goal.Children.Add(Text("Meta pessoal de farm",17,true,top:12));goal.Children.Add(Text("Comparação com uma meta escolhida por você, em CS por minuto.",12,false,Muted,top:8));var target=new ComboBox{Margin=new Thickness(0,16,0,0),ItemsSource=new double[]{4,5,6,7,8,9,10},SelectedItem=preferences.CsTarget};target.SelectionChanged+=(_,_)=>{if(target.SelectedItem is double value){preferences.CsTarget=value;_=SavePreferences();UpdateOverlay();}};goal.Children.Add(target);var goalCard=Card(goal);goalCard.Margin=new Thickness(6,0,0,12);Grid.SetColumn(goalCard,1);Grid.SetRow(goalCard,1);grid.Children.Add(goalCard);ResearchDetails.Children.Add(grid);
         var pending=new StackPanel();pending.Children.Add(Text("Outros recursos das referências",18,true));pending.Children.Add(Text("Ultimates aliados, comparação de inventários e estatísticas da tela de carregamento ainda não estão disponíveis nesta versão. Cada recurso precisa de uma fonte de dados e validação próprias.",12,false,Muted,top:10));ResearchDetails.Children.Add(Card(pending));
-        ResearchDetails.Children.Add(Button("Código-fonte e licença GPL-3.0 ↗",()=>OpenUrl("https://github.com/robertfxbr/Bardo.gg"),top:12));
-        ResearchDetails.Children.Add(Text("Bardo.gg is not endorsed by Riot Games and does not reflect the views or opinions of Riot Games or anyone officially involved in producing or managing Riot Games properties. Riot Games and all associated properties are trademarks or registered trademarks of Riot Games, Inc.",10,false,Muted,top:8));
+        ResearchDetails.Children.Add(Button("Código-fonte e licença GPL-3.0 ↗",()=>OpenUrl("https://github.com/robertfxbr/Bardola"),top:12));
+        ResearchDetails.Children.Add(Text("Bardola is not endorsed by Riot Games and does not reflect the views or opinions of Riot Games or anyone officially involved in producing or managing Riot Games properties. Riot Games and all associated properties are trademarks or registered trademarks of Riot Games, Inc.",10,false,Muted,top:8));
     }
     FrameworkElement SettingRow(string title,string description,bool enabled,Action<bool> changed){
         var row=new Grid{Margin=new Thickness(0,16,0,0)};row.ColumnDefinitions.Add(new());row.ColumnDefinitions.Add(new(){Width=GridLength.Auto});

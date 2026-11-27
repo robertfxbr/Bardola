@@ -13,6 +13,19 @@ using var key=ECDsa.Create(ECCurve.NamedCurves.nistP256);string secret=key.Expor
 await Test("instala pacote assinado e mantém configurações do usuário",async()=>{var f=Fixture();File.WriteAllText(Path.Combine(f.install,"preferences-v2.json"),"minhas preferências");ReleasePublisher.Publish(f.app,f.feed,"0.3.0",secret);var m=new UpdateManager(f.install,f.feed,pub);True((await m.CheckAsync()).Updated);True(m.Current()!.Version=="0.3.0");True(File.Exists(m.Executable()));True(File.ReadAllText(Path.Combine(f.install,"preferences-v2.json"))=="minhas preferências");});
 await Test("segunda versão usa a mesma instalação e guarda anterior",async()=>{var f=Fixture();ReleasePublisher.Publish(f.app,f.feed,"0.3.0",secret);var m=new UpdateManager(f.install,f.feed,pub);await m.CheckAsync();File.WriteAllText(Path.Combine(f.app,"BardoApp.exe"),"MZ-build-B");ReleasePublisher.Publish(f.app,f.feed,"0.3.1",secret);True((await m.CheckAsync()).Updated);True(m.Current()!.PreviousVersion=="0.3.0");True(File.ReadAllText(m.Executable())=="MZ-build-B");});
 await Test("versão igual não reinstala",async()=>{var f=Fixture();ReleasePublisher.Publish(f.app,f.feed,"0.3.0",secret);var m=new UpdateManager(f.install,f.feed,pub);await m.CheckAsync();True(!(await m.CheckAsync()).Updated);});
+await Test("instalador substitui a prévia local da mesma versão por uma compilação assinada",async()=>{
+    var f=Fixture();
+    ReleasePublisher.Publish(f.app,f.feed,"0.8.2",secret);
+    await new UpdateManager(f.install,f.feed,pub).CheckAsync();
+    string publicFeed=Path.Combine(f.feed,"official");
+    File.WriteAllText(Path.Combine(f.app,"BardoApp.exe"),"MZ-Bardola");
+    ReleasePublisher.Publish(f.app,publicFeed,"0.8.2",secret);
+    var installer=new UpdateManager(f.install,publicFeed,pub);
+    True(!(await installer.CheckAsync()).Updated);
+    True((await installer.CheckAsync(reinstallSignedBuild:true)).Updated);
+    True(File.ReadAllText(installer.Executable())=="MZ-Bardola");
+    True(!(await installer.CheckAsync(reinstallSignedBuild:true)).Updated);
+});
 await Test("downgrade assinado não substitui versão atual",async()=>{var f=Fixture();ReleasePublisher.Publish(f.app,f.feed,"0.3.1",secret);var m=new UpdateManager(f.install,f.feed,pub);await m.CheckAsync();ReleasePublisher.Publish(f.app,f.feed,"0.3.0",secret);True(!(await m.CheckAsync()).Updated);True(m.Current()!.Version=="0.3.1");});
 await Test("manifesto adulterado é recusado",async()=>{var f=Fixture();ReleasePublisher.Publish(f.app,f.feed,"0.3.0",secret);string p=Path.Combine(f.feed,"latest.json");File.WriteAllText(p,File.ReadAllText(p).Replace("0.3.0","0.9.0"));bool rejected=false;try{await new UpdateManager(f.install,f.feed,pub).CheckAsync();}catch(InvalidDataException){rejected=true;}True(rejected);True(!File.Exists(Path.Combine(f.install,"current.json")));});
 await Test("assinatura de outra chave é recusada",async()=>{var f=Fixture();ReleasePublisher.Publish(f.app,f.feed,"0.3.0",secret);using var other=ECDsa.Create(ECCurve.NamedCurves.nistP256);bool rejected=false;try{await new UpdateManager(f.install,f.feed,other.ExportSubjectPublicKeyInfoPem()).CheckAsync();}catch(InvalidDataException){rejected=true;}True(rejected);});

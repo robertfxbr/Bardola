@@ -6,6 +6,7 @@ Companheiro independente para **League of Legends**, em português, sem Overwolf
 - Importação automática de itens, runas e feitiços na seleção de campeão; Flash no D ou F e backup da página de runas reutilizada.
 - Perfil da conta ativa no cliente, ranques e histórico recente, sem pedir a senha do LoL.
 - Com o LoL fechado, **Meu perfil** mostra a última sincronização local. A API do Bardola permite consultar um Riot ID do Brasil quando o servidor está configurado. [Executar a API de perfis](docs/api-perfis.md)
+- Em **Meu perfil → Campeões**, filtre o histórico por campeão e fila para ver vitórias, KDA e desempenho. O pós-jogo compara o KDA com a amostra da mesma região e fila nos últimos 30 dias quando a API está disponível. [Comparativo regional](docs/api-perfis.md)
 - Na seleção do Rift, a aba **Partida** sugere opções por função, maestria e elo. As sugestões levam em conta os picks inimigos confirmados, as taxas históricas de confronto com amostra a partir de 100 jogos e os bans já realizados.
 - Arsenais locais por campeão e patch, com ordem de compra e variantes na loja. Em Ajustes, é possível adicionar arquivos JSON de arsenal do Blitz.
 - Tier das cartas do ARAM Desordem por campeão. O overlay reconhece títulos em inglês e português no modo sem bordas. A correspondência dos nomes usa o ID da carta nos catálogos do mesmo patch do CommunityDragon.
@@ -17,7 +18,7 @@ Companheiro independente para **League of Legends**, em português, sem Overwolf
 
 ## Instalar
 
-Windows 10 (2004 ou posterior) ou Windows 11 x64 com **[.NET Desktop Runtime 10](https://dotnet.microsoft.com/download/dotnet/10.0)**. Baixe `Instalar-Bardo.gg.exe` em [Releases](https://github.com/robertfxbr/Bardola/releases/latest), execute uma vez e abra o Bardola pelo atalho criado na instalação. Não são necessários direitos de administrador. O app não substitui seu cliente do League.
+Windows 10 (2004 ou posterior) ou Windows 11 x64 com **[.NET Desktop Runtime 10](https://dotnet.microsoft.com/download/dotnet/10.0)**. Baixe `Instalar-Bardola.exe` em [Releases](https://github.com/robertfxbr/Bardola/releases/latest), execute uma vez e abra o Bardola pelo atalho criado na instalação. Não são necessários direitos de administrador. O app não substitui seu cliente do League.
 
 O instalador contém o aplicativo inicial e funciona sem internet para instalar. Builds e imagens precisam de internet na primeira consulta. Depois da instalação, novas versões publicadas são baixadas automaticamente; a aplicação ocorre ao fechar e abrir o Bardola, preservando preferências e favoritos.
 
@@ -56,7 +57,7 @@ Quem criar um fork deve configurar seu próprio repositório e par de chaves ant
 
 ## Privacidade e licença
 
-O app usa a sessão local do cliente; não pede senha, não salva a credencial da sessão e não envia dados da conta a um servidor do Bardola. Preferências, cache, sessões e backups ficam em `%LOCALAPPDATA%/Bardo.gg`. Consultas de builds e catálogo são feitas diretamente às fontes indicadas. Não lê memória de processo nem injeta código no jogo.
+A conexão com o cliente usa a sessão local. A credencial permanece no PC. Consultar um perfil pelo nome envia o Riot ID à API configurada. O comparativo envia a plataforma, o ID da partida, a equipe e o campeão à mesma API. Preferências, cache, sessões e backups ficam em `%LOCALAPPDATA%/Bardo.gg`. Consultas de builds e catálogo são feitas diretamente às fontes indicadas. Não lê memória de processo nem injeta código no jogo.
 
 Código original sob **GPL-3.0**, conforme [LICENSE](LICENSE). Marcas, imagens e dados de terceiros seguem seus próprios termos: veja [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
 

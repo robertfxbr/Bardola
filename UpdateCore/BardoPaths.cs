@@ -3,7 +3,7 @@ namespace NexoLoL.Updates;
 public static class BardoPaths
 {
     public static string Root=>Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),"Bardo.gg");
-    public static string Launcher=>Path.Combine(Root,"Bardo.gg.exe");
+    public static string Launcher=>Path.Combine(Root,"Bardola.exe");
     public static void MigrateLegacyData(string? destination=null,string? legacy=null)
     {
         string target=Path.GetFullPath(destination??Root),source=Path.GetFullPath(legacy??Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),"NexoLoL"));

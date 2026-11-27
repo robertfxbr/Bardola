@@ -10,14 +10,14 @@ public sealed class RiotCooldown(int seconds):Exception
     public int Seconds {get;}=seconds;
 }
 
-public sealed class RiotProfiles(HttpClient http)
+public sealed class RiotProfiles(HttpClient http, RegionalSamples samples)
 {
     const string Americas="https://americas.api.riotgames.com";
     const string Brazil="https://br1.api.riotgames.com";
     readonly object cooldownLock=new();
     DateTimeOffset retryAt;
 
-    async Task<T> Read<T>(string url,string key,CancellationToken ct)
+    internal async Task<T> Read<T>(string url,string key,CancellationToken ct)
     {
         lock(cooldownLock){
             var remaining=(retryAt-DateTimeOffset.UtcNow).TotalSeconds;
@@ -60,11 +60,13 @@ public sealed class RiotProfiles(HttpClient http)
             var info=data.Info;
             if(data.Metadata?.MatchId!=matchId || info?.GameType!="MATCHED_GAME" ||
                 info.QueueId is not (400 or 420 or 430 or 440 or 450 or 490 or 2400))continue;
+            samples.Record("BR1",number,data);
             var player=info.Participants?.FirstOrDefault(p=>p.Puuid==identity.Puuid);
             if(player is null || info.GameId!=number || info.GameCreation is <=0 or >253402300799999)continue;
             matches.Add(new(number,player.ChampionId,info.QueueId==2400?"KIWI":info.GameMode,player.Win,
                 player.Kills,player.Deaths,player.Assists,player.TotalMinionsKilled+player.NeutralMinionsKilled,
-                info.GameDuration,DateTimeOffset.FromUnixTimeMilliseconds(info.GameCreation),player.TotalDamageDealtToChampions));
+                info.GameDuration,DateTimeOffset.FromUnixTimeMilliseconds(info.GameCreation),player.TotalDamageDealtToChampions,
+                Platform:"BR1",TeamId:player.TeamId,QueueId:info.QueueId,Gold:player.GoldEarned,Vision:player.VisionScore));
         }
         return new(identity.GameName+"#"+identity.TagLine,summoner.SummonerLevel,summoner.ProfileIconId,"BR1",ranks,matches,
             "Filas públicas compatíveis entre as cinco partidas mais recentes · Riot Games");
@@ -72,8 +74,10 @@ public sealed class RiotProfiles(HttpClient http)
     sealed record Identity(string Puuid,string GameName,string TagLine);
     sealed record Summoner(int SummonerLevel,int ProfileIconId);
     sealed record Standing(string QueueType,string Tier,string Rank,int LeaguePoints,int Wins,int Losses);
-    sealed record Match(Metadata? Metadata,GameInfo? Info);
-    sealed record Metadata(string MatchId);
-    sealed record GameInfo(long GameId,long GameCreation,int GameDuration,string GameType,string GameMode,int QueueId,Player[]? Participants);
-    sealed record Player(string Puuid,int ChampionId,bool Win,int Kills,int Deaths,int Assists,int TotalMinionsKilled,int NeutralMinionsKilled,int? TotalDamageDealtToChampions);
+    internal sealed record Match(Metadata? Metadata,GameInfo? Info);
+    internal sealed record Metadata(string MatchId);
+    internal sealed record GameInfo(long GameId,long GameCreation,int GameDuration,string GameType,string GameMode,int QueueId,Player[]? Participants);
+    internal sealed record Player(string Puuid,int ChampionId,bool Win,[property:JsonRequired]int Kills,[property:JsonRequired]int Deaths,
+        [property:JsonRequired]int Assists,int TotalMinionsKilled,int NeutralMinionsKilled,int? TotalDamageDealtToChampions,int TeamId,
+        bool GameEndedInEarlySurrender,int? GoldEarned=null,int? VisionScore=null);
 }

@@ -1,13 +1,7 @@
-Bardo.gg 0.8.0
+Bardola 0.8.2
 
-Na seleção do Rift, a aba Partida abre sugestões de campeões por função e maestria. A lista usa o elo Solo/Duo como referência e muda à medida que os adversários confirmam escolhas. Durante os bans, mostra opções contra os possíveis picks do jogador quando há dados.
+O aplicativo, o atalho e o instalador agora usam o nome **Bardola**. Na versão 0.8.0, abra **Ajustes → Atualizar versão → Reiniciar e usar 0.8.2**. Seus favoritos, perfil e configurações ficam disponíveis após a atualização.
 
-Meu perfil exibe a última sincronização salva no PC com o League fechado. A primeira API do Bardo.gg consulta Riot IDs no Brasil com uma chave no servidor. O acesso público e o login Riot dependem de aprovação.
+Em **Meu perfil → Campeões**, escolha um campeão e uma fila para consultar vitórias, médias de combate, dano, farm e histórico. Cada partida do perfil também tem um botão **Mais informações do campeão**.
 
-O placar mostra a participação de cada jogador nos abates e no dano da equipe. Passe o mouse no dano para ver a divisão por tipo. O dano mitigado aparece em destaque quando disponível. Abra **Linha do tempo** para rever os abates e objetivos registrados no histórico.
-
-No ARAM Desordem, o overlay reconhece os nomes das cartas em português com o catálogo do patch.
-
-O botão **Atualizar versão** fica no topo de Ajustes, ao lado da versão em uso. Quando a atualização estiver pronta, clique em **Reiniciar e usar** para abri-la.
-
-O pós-jogo mostra as duas equipes com retratos, itens, aprimoramentos, KDA, CS e dano a campeões. Passe o mouse nos ícones para consultar os nomes. As cartas vêm do catálogo do próprio League. Seu jogador recebe destaque no placar.
+O pós-jogo compara o KDA com atuações acompanhadas na mesma plataforma, campeão e fila nos últimos 30 dias. A posição por KDA médio usa jogadores com pelo menos cinco partidas na amostra. A ficha inclui um link para o perfil do campeão no LeagueOfGraphs.

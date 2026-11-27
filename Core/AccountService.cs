@@ -4,7 +4,8 @@ namespace NexoLoL.Core;
 
 public record AccountRank(string Queue,string Tier,string Division,int Points,int Wins,int Losses);
 public record AccountMatch(long Id,int ChampionId,string Mode,bool Win,int Kills,int Deaths,int Assists,int Cs,int Duration,DateTimeOffset At,
-    int? ChampionDamage=null,int? DamageTaken=null,int? AllyHealingAndShielding=null,List<int>? Items=null,List<ScoreTeam>? Teams=null);
+    int? ChampionDamage=null,int? DamageTaken=null,int? AllyHealingAndShielding=null,List<int>? Items=null,List<ScoreTeam>? Teams=null,
+    string? Platform=null,int TeamId=0,int QueueId=0,int? Gold=null,int? Vision=null);
 public record GameAccount(string RiotId,int Level,int IconId,string Region,List<AccountRank> Ranks,List<AccountMatch> Matches,string HistoryMessage="");
 
 public static class AccountParser
@@ -39,7 +40,9 @@ public static class AccountParser
                 (int)N(stats["kills"]),(int)N(stats["deaths"]),(int)N(stats["assists"]),(int)(N(stats["totalMinionsKilled"])+N(stats["neutralMinionsKilled"])),(int)N(m["gameDuration"]),at,
                 FinalScore.Number(stats["totalDamageDealtToChampions"]),FinalScore.Number(stats["totalDamageTaken"]),
                 FinalScore.Number(stats["totalHealsOnTeammates"]??stats["totalHealOnTeammates"])+FinalScore.Number(stats["totalDamageShieldedOnTeammates"]),
-                Enumerable.Range(0,7).Select(i=>(int)N(stats["item"+i])).Where(id=>id>0).ToList()));
+                Enumerable.Range(0,7).Select(i=>(int)N(stats["item"+i])).Where(id=>id>0).ToList(),
+                Platform:S(m["platformId"]),TeamId:(int)N(self["teamId"]),QueueId:(int)N(m["queueId"]),
+                Gold:FinalScore.Number(stats["goldEarned"]),Vision:FinalScore.Number(stats["visionScore"])));
         }
         return new(name+(tag!=""?"#"+tag:""),(int)N(profile["summonerLevel"]),(int)N(profile["profileIconId"]),S(region?["region"]),ranks,matches.Take(20).ToList());
     }

@@ -6,6 +6,8 @@ using NexoLoL.Core;
 var builder=WebApplication.CreateBuilder();
 builder.Configuration["urls"]="http://127.0.0.1:0";
 builder.Configuration["RIOT_API_KEY"]="fixture";
+var dataDir=Directory.CreateTempSubdirectory("bardo-regional-");
+builder.Configuration["BARDO_COMPARISON_DB"]=Path.Combine(dataDir.FullName,"test.sqlite");
 builder.Logging.ClearProviders();
 var upstream=new RiotFixture();
 builder.Services.AddSingleton(new HttpClient(upstream));
@@ -28,7 +30,23 @@ var limit=await client.GetAsync("/v1/br1/profile?riotId=Limite%23BR1");
 Check(limit.StatusCode==HttpStatusCode.TooManyRequests && limit.Headers.RetryAfter?.Delta?.TotalSeconds==30,"propaga Retry-After");
 var before=upstream.Count;
 Check((await client.GetAsync("/v1/br1/profile?riotId=Outro%23BR1")).StatusCode==HttpStatusCode.TooManyRequests && before==upstream.Count,"respeita o bloqueio da Riot entre consultas");
+var samples=app.Services.GetRequiredService<RegionalSamples>();
+for(int i=0;i<50;i++){
+    int player=i%10;
+    var players=Enumerable.Range(0,10).Select(j=>new RiotProfiles.Player(j==0?$"bard-{player}":$"other-{j}",j==0?432:j,false,
+        j==0?player+1:0,0,0,0,0,null,j<5?100:200,false)).ToArray();
+    var info=new RiotProfiles.GameInfo(100+i,DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),1800,"MATCHED_GAME","CLASSIC",420,players);
+    var sample=new RiotProfiles.Match(new($"BR1_{100+i}"),info);
+    samples.Record("BR1",100+i,sample);samples.Record("BR1",100+i,sample);
+    samples.Record("KR",100+i,sample);
+    samples.Record("BR1",300+i,new(new($"BR1_{300+i}"),info with{GameId=300+i,QueueId=450}));
+}
+var comparison=await client.GetFromJsonAsync<RegionalComparison>("/v1/comparisons/BR1/149/100/432");
+Check(comparison is {Kda:10,Average:5,Matches:45,PlayerGames:5,RankedPlayers:10,PlayerRank:1}
+    && Math.Abs(comparison.TopPercent!.Value-100d/46)<0.0001,"comparação por fila sem duplicatas, mortes zero, percentil e posição por jogador");
 await app.StopAsync();
+Microsoft.Data.Sqlite.SqliteConnection.ClearAllPools();
+dataDir.Delete(true);
 
 sealed class RiotFixture:HttpMessageHandler
 {

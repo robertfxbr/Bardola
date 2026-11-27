@@ -6,7 +6,7 @@ public sealed class RemoteData : IDisposable
 {
     readonly HttpClient http;
     readonly TimeSpan deadline;
-    public RemoteData(HttpMessageHandler? handler=null,TimeSpan? timeout=null) {http=new(handler??new HttpClientHandler{AllowAutoRedirect=true}){Timeout=Timeout.InfiniteTimeSpan};deadline=timeout??TimeSpan.FromSeconds(18);http.DefaultRequestHeaders.UserAgent.ParseAdd("Bardo.gg/0.3 (desktop companion)");}
+    public RemoteData(HttpMessageHandler? handler=null,TimeSpan? timeout=null) {http=new(handler??new HttpClientHandler{AllowAutoRedirect=true}){Timeout=Timeout.InfiniteTimeSpan};deadline=timeout??TimeSpan.FromSeconds(18);http.DefaultRequestHeaders.UserAgent.ParseAdd("Bardola/0.3 (desktop companion)");}
     public async Task<byte[]> BytesAsync(string url,int max=4_000_000,CancellationToken ct=default)
     {
         using var budget=CancellationTokenSource.CreateLinkedTokenSource(ct);budget.CancelAfter(deadline);

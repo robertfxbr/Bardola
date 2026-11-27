@@ -24,7 +24,7 @@ public partial class MainWindow
             if(!token.IsCancellationRequested)SetNativeTimerStatus(enabled?"Ativados no minimapa do LoL · configuração confirmada":"Modo básico do LoL · configuração confirmada");
         }catch(OperationCanceledException) when(token.IsCancellationRequested){}
         catch(Exception e) when(e is IOException or InvalidDataException or System.Net.Http.HttpRequestException or System.Text.Json.JsonException or OperationCanceledException){
-            if(!token.IsCancellationRequested)SetNativeTimerStatus(e is InvalidDataException?e.Message:"Cliente indisponível. O Bardo.gg tentará configurar quando ele estiver aberto.");
+            if(!token.IsCancellationRequested)SetNativeTimerStatus(e is InvalidDataException?e.Message:"Cliente indisponível. O Bardola tentará configurar quando ele estiver aberto.");
         }finally{configuringNativeTimers=false;}
     }
     void SetNativeTimerStatus(string text){nativeTimerMessage=text;if(nativeTimerStatus is not null)nativeTimerStatus.Text=text;}

@@ -141,7 +141,7 @@ public partial class MainWindow
         panel.Children.Add(calibrationStatus);
         panel.Children.Add(Button("Calibrar posições",()=>{
             preferences.AutoMapRelics=true;_=SavePreferences();ClearRelicReadings();awaitingCalibrationFrame=true;BuildResearch();
-            if(calibrationStatus!=null)calibrationStatus.Text="Em uma partida ARAM, mantenha Tab pressionado com o placar visível. Depois volte à janela de calibração do Bardo.gg.";
+            if(calibrationStatus!=null)calibrationStatus.Text="Em uma partida ARAM, mantenha Tab pressionado com o placar visível. Depois volte à janela de calibração do Bardola.";
         },top:8));
     }
 }

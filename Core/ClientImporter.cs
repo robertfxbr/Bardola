@@ -87,7 +87,7 @@ public sealed class ClientImporter(string backupDirectory)
             var generated=JsonNode.Parse(ExportService.CreateItemSet(doc,arsenal))!;
             generated["uid"]=uid;
             if(arsenal.ArsenalSource is not null)generated["priority"]=arsenal==variant;
-            generated["title"]=arsenal.ArsenalSource is null?$"Bardo.gg · {doc.Query.Slug} · {doc.Patch}":$"Bardo.gg · {arsenal.Name} · {doc.Patch}";
+            generated["title"]=arsenal.ArsenalSource is null?$"Bardola · {doc.Query.Slug} · {doc.Patch}":$"Bardola · {arsenal.Name} · {doc.Patch}";
             int index=-1;for(int i=0;i<sets.Count;i++)if(S(sets[i]?["uid"])==uid){index=i;break;}
             if(index>=0)sets[index]=generated;else sets.Add(generated);
             requested.Add(generated);
@@ -111,8 +111,8 @@ public sealed class ClientImporter(string backupDirectory)
         string statePath=StatePath(expected.Owner);var state=await ReadState(statePath,ct);
         long managed=N(state?["managedPageId"]);
         JsonNode? page=pages.FirstOrDefault(p=>N(p?["id"])==managed && B(p?["isEditable"]));
-        page??=pages.FirstOrDefault(p=>(S(p?["name"]).StartsWith("Bardo.gg ·",StringComparison.Ordinal) || S(p?["name"]).StartsWith("Nexo LoL ·",StringComparison.Ordinal)) && B(p?["isEditable"]));
-        var payload=new JsonObject{["name"]="Bardo.gg · seleção atual",["primaryStyleId"]=runes.PrimaryStyle,["subStyleId"]=runes.SecondaryStyle,["selectedPerkIds"]=new JsonArray(runes.Perks.Select(x=>(JsonNode?)JsonValue.Create(x)).ToArray())};
+        page??=pages.FirstOrDefault(p=>(S(p?["name"]).StartsWith("Bardola ·",StringComparison.Ordinal) || S(p?["name"]).StartsWith("Bardo.gg ·",StringComparison.Ordinal) || S(p?["name"]).StartsWith("Nexo LoL ·",StringComparison.Ordinal)) && B(p?["isEditable"]));
+        var payload=new JsonObject{["name"]="Bardola · seleção atual",["primaryStyleId"]=runes.PrimaryStyle,["subStyleId"]=runes.SecondaryStyle,["selectedPerkIds"]=new JsonArray(runes.Perks.Select(x=>(JsonNode?)JsonValue.Create(x)).ToArray())};
         long id=0;
         if(page is null) {
             var inventory=await api.GetAsync("/lol-perks/v1/inventory",ct);

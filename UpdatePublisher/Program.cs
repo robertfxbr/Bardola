@@ -11,7 +11,7 @@ if(args.Contains("--init-key")){
     string pub=key.ExportSubjectPublicKeyInfoPem();
     if(ReleaseTrust.PublicKey!="UNINITIALIZED" && pub!=ReleaseTrust.PublicKey)throw new InvalidOperationException("A chave privada não corresponde à chave pública já fixada no app.");
     string output=Arg("--trust")??"UpdateCore/ReleaseTrust.cs";
-    string source="namespace NexoLoL.Updates;\n\npublic static class ReleaseTrust\n{\n    public const string Repository=\"robertfxbr/Bardo.gg\";\n    public const string Feed=\"https://github.com/robertfxbr/Bardo.gg/releases/latest/download/latest.json\";\n    public const string PublicKey="+JsonSerializer.Serialize(pub)+";\n}\n";
+    string source="namespace NexoLoL.Updates;\n\npublic static class ReleaseTrust\n{\n    public const string Repository=\"robertfxbr/Bardola\";\n    public const string Feed=\"https://github.com/robertfxbr/Bardola/releases/latest/download/latest.json\";\n    public const string PublicKey="+JsonSerializer.Serialize(pub)+";\n}\n";
     // A chave privada nunca é escrita no workspace ou mostrada em stdout.
     File.WriteAllText(output,source);Console.WriteLine(JsonSerializer.Serialize(new{initialized=true,publicKeyPinned=output}));return 0;
 }

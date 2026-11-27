@@ -8,11 +8,11 @@ Barra superior compacta, fundo grafite, destaques dourados e verde, importaçõe
 
 ## Atualização
 
-O instalador contém uma versão assinada e instala em `%LOCALAPPDATA%/Bardo.gg`. O atalho aponta sempre para `Bardo.gg.exe`; o aplicativo fica em `app-versions/<versão>/BardoApp.exe`. O app verifica GitHub Releases ao iniciar e a cada 15 minutos. Uma nova versão é baixada, validada e preparada; só é usada ao abrir o app novamente. A atualização não reinicia o aplicativo durante o jogo.
+O instalador contém uma versão assinada e instala em `%LOCALAPPDATA%/Bardo.gg`. O atalho aponta para o inicializador `Bardola.exe` nas novas instalações; o aplicativo fica em `app-versions/<versão>/BardoApp.exe`. O app verifica GitHub Releases ao iniciar e a cada 15 minutos. Uma nova versão é baixada, validada e preparada; só é usada ao abrir o app novamente. A atualização não reinicia o aplicativo durante o jogo.
 
 Manifesto e pacote são verificados com ECDSA P-256 e SHA-256. A chave pública está no código. A chave privada de publicação fica fora do repositório e dos instaladores. Extração tem limites e recusa caminhos fora da instalação, links simbólicos e entradas duplicadas. O ponteiro de versão é trocado por escrita atômica e a versão anterior é preservada. A reinstalação verifica e repara o executável; há rollback quando a versão anterior está disponível e íntegra. Falhas de rede mantêm o app atual.
 
-O launcher não atualiza seu próprio protocolo automaticamente. Mudanças futuras incompatíveis no launcher/runtime podem exigir instalador novo. O pacote atual exige .NET Desktop Runtime 10; esse runtime não é instalado pelo Bardo.gg.
+O launcher não atualiza seu próprio protocolo automaticamente. Mudanças futuras incompatíveis no launcher/runtime podem exigir instalador novo. O pacote atual exige .NET Desktop Runtime 10; esse runtime não é instalado pelo Bardola.
 
 ## Painel de partida
 
