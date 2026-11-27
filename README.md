@@ -13,6 +13,7 @@ Companheiro independente para **League of Legends**, em português, sem Overwolf
 - Placar com participação em abates e dano da equipe, dano mitigado e divisão de dano por tipo. O botão **Linha do tempo** abre os abates, estruturas e objetivos disponíveis no histórico.
 - Catálogo e imagens oficiais, favoritos, cache validado e exportação de conjuntos de itens.
 - Painel opcional de estatísticas próprias, build e prioridade de habilidades para modo sem bordas/segundo monitor.
+- Em **Ajustes → Modo ghost**, o Bardola continua no seu monitor e solicita ao Windows que exclua suas janelas e overlays de capturas compatíveis. Confira a prévia do seu gravador antes de transmitir. Se o Windows recusar a proteção de um overlay de cartas ou de curas, o Bardola oculta esse overlay enquanto o modo estiver ativo.
 - Cronômetros automáticos no minimapa usando o modo avançado do próprio LoL; contadores de cura do ARAM sincronizados pelo placar.
 - Atualizações assinadas em segundo plano. Em **Ajustes → Atualizar versão**, você pode buscar uma atualização e reiniciar o Bardola assim que ela estiver pronta.
 

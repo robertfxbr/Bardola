@@ -9,6 +9,37 @@ namespace NexoLoL.Desktop;
 
 public partial class MainWindow
 {
+    readonly GhostMode ghost=new();
+    TextBlock? ghostWarning;
+    void QueueGhostStatus()
+    {
+        if(ghostWarning!=null && !Dispatcher.HasShutdownStarted)Dispatcher.InvokeAsync(RefreshGhostStatus);
+    }
+    void RefreshGhostStatus()
+    {
+        if(ghostWarning==null)return;
+        ghostWarning.Visibility=ghost.HasFailures?Visibility.Visible:Visibility.Collapsed;
+        ghostWarning.Text=preferences.GhostMode
+            ?"O Windows não confirmou a proteção de todas as janelas. Confira a prévia da transmissão."
+            :"O Windows não liberou a captura de todas as janelas. Reinicie o Bardola para concluir.";
+    }
+    bool CanShowGhostOverlay(Window window)
+    {
+        if(!preferences.GhostMode || ghost.Protect(new System.Windows.Interop.WindowInteropHelper(window).EnsureHandle()))return true;
+        if(window.IsVisible)window.Hide();
+        return false;
+    }
+    void SetGhostMode(bool enabled)
+    {
+        preferences.GhostMode=enabled;
+        ghost.SetEnabled(enabled);
+        if(enabled){
+            if(mapOverlay?.IsVisible==true)CanShowGhostOverlay(mapOverlay);
+            if(cardOverlay?.IsVisible==true)CanShowGhostOverlay(cardOverlay);
+        }
+        RefreshGhostStatus();
+        _=SavePreferences();
+    }
     readonly DispatcherTimer updateTimer=new(){Interval=TimeSpan.FromMinutes(15)};
     TextBlock? updateStatus;
     Button? updateButton;
@@ -90,6 +121,12 @@ public partial class MainWindow
         updates.Children.Add(version);
         ResearchDetails.Children.Add(Card(updates));
         RefreshUpdateButton();
+        var privacy=new StackPanel();
+        privacy.Children.Add(SettingRow("Modo ghost","Oculta o Bardola e seus overlays de transmissões e gravações compatíveis com a proteção de captura do Windows.",preferences.GhostMode,SetGhostMode));
+        ghostWarning=Text("",12,false,Accent,top:6);
+        privacy.Children.Add(ghostWarning);
+        RefreshGhostStatus();
+        ResearchDetails.Children.Add(Card(privacy));
         var import=new StackPanel();import.Children.Add(Text("Importação de builds",18,true));
         import.Children.Add(SettingRow("Importar runas automaticamente","Aplicar as runas da build durante a seleção de campeão.",AutoRunes.IsChecked==true,value=>AutoRunes.IsChecked=value));
         import.Children.Add(SettingRow("Importar itens automaticamente","Preparar o conjunto de itens na loja do LoL.",AutoItems.IsChecked==true,value=>AutoItems.IsChecked=value));

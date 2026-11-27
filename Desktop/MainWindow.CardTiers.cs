@@ -117,6 +117,7 @@ public partial class MainWindow
                 cardOverlay.SourceInitialized+=(_,_)=>{var handle=new WindowInteropHelper(cardOverlay).Handle;SetStyle(handle,-20,GetStyle(handle,-20)|0x20|0x08000000|0x80);};
             }
             cardCanvas.Children.Clear();
+            if(!CanShowGhostOverlay(cardOverlay))return;
             if(!cardOverlay.IsVisible)cardOverlay.Show();
             SetWindowPos(new WindowInteropHelper(cardOverlay).Handle,new IntPtr(-1),bounds.X,bounds.Y,bounds.Width,bounds.Height,0x10);
             var dpi=VisualTreeHelper.GetDpi(cardOverlay);

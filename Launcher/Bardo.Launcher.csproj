@@ -1,4 +1,4 @@
 <Project Sdk="Microsoft.NET.Sdk">
- <PropertyGroup><OutputType>WinExe</OutputType><TargetFramework>net10.0-windows</TargetFramework><ImplicitUsings>enable</ImplicitUsings><Nullable>enable</Nullable><AssemblyName>Bardola</AssemblyName><Version>0.8.2</Version><Product>Bardola</Product><PublishSingleFile>true</PublishSingleFile><SelfContained>false</SelfContained></PropertyGroup>
+ <PropertyGroup><OutputType>WinExe</OutputType><TargetFramework>net10.0-windows</TargetFramework><ImplicitUsings>enable</ImplicitUsings><Nullable>enable</Nullable><AssemblyName>Bardola</AssemblyName><Version>0.8.3</Version><Product>Bardola</Product><PublishSingleFile>true</PublishSingleFile><SelfContained>false</SelfContained></PropertyGroup>
  <ItemGroup><ProjectReference Include="../UpdateCore/NexoLoL.UpdateCore.csproj"/><EmbeddedResource Include="../.build/bootstrap/*" LogicalName="Bootstrap.%(Filename)%(Extension)"/></ItemGroup>
 </Project>

@@ -50,6 +50,10 @@ public partial class MainWindow : Window
     public MainWindow(RemoteData remoteData,string? directory=null,Func<ILeagueApi>? apiFactory=null)
     {
         dataRoot=directory??BardoPaths.Root;if(directory is null)BardoPaths.MigrateLegacyData();
+        preferences=Read<Preferences>("preferences-v2.json")??Read<Preferences>("preferences.json")??new();
+        ghost.StatusChanged+=QueueGhostStatus;
+        if(preferences.GhostMode)ghost.SetEnabled(true);
+        SourceInitialized+=(_,_)=>ghost.Protect(new System.Windows.Interop.WindowInteropHelper(this).Handle);
         importer=new ClientImporter(Path.Combine(dataRoot,"rune-backups"));leagueApiFactory=apiFactory??LeagueClient.Open;
         remote=remoteData;
         InitializeComponent();
@@ -63,7 +67,6 @@ public partial class MainWindow : Window
         StartUpdates();
         catalogService=new(dataRoot,remote);builds=new(Path.Combine(dataRoot,"builds"),remote.BuildHtmlAsync);
         try {
-            preferences=Read<Preferences>("preferences-v2.json")??Read<Preferences>("preferences.json")??new();
             if(preferences.RelicSeconds is <30 or >300 || !double.IsFinite(preferences.RelicSeconds))preferences.RelicSeconds=90;
             sessions.AddRange((Read<List<LocalSession>>("sessions.json")??[]).Take(30));
             catalog=await catalogService.LoadAsync(lifetime.Token);
@@ -354,7 +357,7 @@ public partial class MainWindow : Window
     void ShowResearch(object sender,RoutedEventArgs e){BuildResearch();ShowPage(ResearchPage,ResearchNav,"Configurações","PREFERÊNCIAS DO BARDOLA");}
     void ShowAccount(object sender,RoutedEventArgs e){ShowPage(AccountPage,AccountNav,"Perfil e histórico","LEAGUE OF LEGENDS");RenderAccount();}
     void OnClosed(object? sender,EventArgs e)
-    {ready=false;cardPoll.Stop();cardOverlay?.Close();relicPoll.Stop();ClearRelicReadings();mapOverlay?.Close();calibrationWindow?.Close();pollTimer.Stop();selectionTimer.Stop();updateTimer.Stop();lifetime.Cancel();nativeTimerRequest?.Cancel();overlay?.Close();request?.Cancel();accountRequest?.Cancel();importRequest?.Cancel();compact?.Close();remote.Dispose();game.Dispose();lifetime.Dispose();}
+    {ready=false;cardPoll.Stop();cardOverlay?.Close();relicPoll.Stop();ClearRelicReadings();mapOverlay?.Close();calibrationWindow?.Close();pollTimer.Stop();selectionTimer.Stop();updateTimer.Stop();lifetime.Cancel();nativeTimerRequest?.Cancel();overlay?.Close();request?.Cancel();accountRequest?.Cancel();importRequest?.Cancel();compact?.Close();ghost.Dispose();remote.Dispose();game.Dispose();lifetime.Dispose();}
 
     async void LoadIcon(Image target,string url,CancellationToken token)
     {
@@ -391,6 +394,7 @@ public partial class MainWindow : Window
 
 public sealed class Preferences
 {
+    public bool GhostMode {get;set;}
     public BuildQuery? Last {get;set;}
     public bool AutoDetect {get;set;}=true;
     public bool LinkAccount {get;set;}

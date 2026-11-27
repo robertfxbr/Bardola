@@ -94,6 +94,7 @@ public partial class MainWindow
             mapOverlay=new Window{WindowStyle=WindowStyle.None,AllowsTransparency=true,Background=Brushes.Transparent,Topmost=true,ShowActivated=false,ShowInTaskbar=false,IsHitTestVisible=false,ResizeMode=ResizeMode.NoResize,Content=mapCanvas,Width=1,Height=1};
             mapOverlay.SourceInitialized+=(_,_)=>{var handle=new WindowInteropHelper(mapOverlay).Handle;SetStyle(handle,-20,GetStyle(handle,-20)|0x20|0x08000000|0x80);};
         }
+        if(!CanShowGhostOverlay(mapOverlay))return;
         if(!mapOverlay.IsVisible)mapOverlay.Show();
         SetWindowPos(new WindowInteropHelper(mapOverlay).Handle,new IntPtr(-1),bounds.X,bounds.Y,bounds.Width,bounds.Height,0x10);
         var dpi=VisualTreeHelper.GetDpi(mapOverlay);

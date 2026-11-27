@@ -40,6 +40,42 @@ static class Program
         Control<ComboBox>("ChampionBox").ItemsSource=catalog.Champions;Control<ComboBox>("ChampionBox").SelectedIndex=0;
         Control<ComboBox>("ModeBox").SelectedIndex=0;Control<ComboBox>("RoleBox").SelectedIndex=0;Control<ComboBox>("TierBox").SelectedIndex=0;
         var q=new BuildQuery(26,"zilean",GameMode.Rift,Patch:"16.23");
+        Check("modo ghost aplica a exclusão a janelas existentes e novas e restaura a captura",()=>{
+            Invoke("BuildResearch");
+            var toggle=Descendants<CheckBox>(Control<StackPanel>("ResearchDetails")).Single(c=>Equals(c.ToolTip,"Modo ghost"));
+            True(toggle.IsChecked==false);
+            using var existing=new GhostWindowProbe();
+            toggle.IsChecked=true;
+            try{
+                True(existing.Affinity==0x11);
+                using var popup=new GhostWindowProbe();
+                True(popup.Affinity==0x11);
+                using var overlay=new GhostWindowProbe(layered:true);
+                True(overlay.Affinity==0x11);
+                toggle.IsChecked=false;
+                True(existing.Affinity==0 && popup.Affinity==0 && overlay.Affinity==0);
+            }finally{toggle.IsChecked=false;}
+        });
+        Check("modo ghost salvo protege novas janelas já na próxima inicialização",()=>{
+            Set("ready",true);
+            Invoke("SetGhostMode",true);
+            Pump((Task)Invoke("SavePreferences")!);
+            var restartDirectory=Path.Combine(directory,"restart-ghost");
+            Directory.CreateDirectory(restartDirectory);
+            File.Copy(Path.Combine(directory,"preferences-v2.json"),Path.Combine(restartDirectory,"preferences-v2.json"));
+            Invoke("SetGhostMode",false);
+            Pump((Task)Invoke("SavePreferences")!);
+            Set("ready",false);
+            using var probe=new GhostWindowProbe();
+            True(probe.Affinity==0);
+            var restarted=new MainWindow(new RemoteData(new EmptyHandler()),restartDirectory,()=>fakeClient);
+            try{True(probe.Affinity==0x11);}
+            finally{
+                typeof(MainWindow).GetMethod("SetGhostMode",Flags)!.Invoke(restarted,[false]);
+                restarted.Close();
+            }
+            True(probe.Affinity==0);
+        });
         var d=new BuildDocument(q,"16.23","LoLalytics",BuildParsers.Url(q),DateTimeOffset.UtcNow,[new("Mais jogada",[new(2003)],[new(6655)],[])]);
         void Reset(){Set("ready",false);Control<ComboBox>("ModeBox").SelectedIndex=0;Set("selected",q);Set("current",new BuildResult(d,false,false,"ok"));Control<Button>("ExportButton").IsEnabled=true;Set("ready",true);}
         Check("botão de atualização em Ajustes reflete verificação e reinício disponível",()=>{
