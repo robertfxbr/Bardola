@@ -5,7 +5,7 @@ Companheiro independente para **League of Legends**, em português, sem Overwolf
 - Builds por campeão, modo, função, elo e patch, com fonte e amostra visíveis.
 - Importação automática de itens, runas e feitiços na seleção de campeão; Flash no D ou F e backup da página de runas reutilizada.
 - Perfil da conta ativa no cliente, ranques e histórico recente, sem pedir a senha do LoL.
-- Com o LoL fechado, **Meu perfil** mostra a última sincronização local. A API do Bardo.gg permite consultar um Riot ID do Brasil quando o servidor está configurado. [Executar a API de perfis](docs/api-perfis.md)
+- Com o LoL fechado, **Meu perfil** mostra a última sincronização local. A API do Bardola permite consultar um Riot ID do Brasil quando o servidor está configurado. [Executar a API de perfis](docs/api-perfis.md)
 - Na seleção do Rift, a aba **Partida** sugere opções por função, maestria e elo. As sugestões levam em conta os picks inimigos confirmados, as taxas históricas de confronto com amostra a partir de 100 jogos e os bans já realizados.
 - Arsenais locais por campeão e patch, com ordem de compra e variantes na loja. Em Ajustes, é possível adicionar arquivos JSON de arsenal do Blitz.
 - Tier das cartas do ARAM Desordem por campeão. O overlay reconhece títulos em inglês e português no modo sem bordas. A correspondência dos nomes usa o ID da carta nos catálogos do mesmo patch do CommunityDragon.
@@ -13,13 +13,13 @@ Companheiro independente para **League of Legends**, em português, sem Overwolf
 - Catálogo e imagens oficiais, favoritos, cache validado e exportação de conjuntos de itens.
 - Painel opcional de estatísticas próprias, build e prioridade de habilidades para modo sem bordas/segundo monitor.
 - Cronômetros automáticos no minimapa usando o modo avançado do próprio LoL; contadores de cura do ARAM sincronizados pelo placar.
-- Atualizações assinadas em segundo plano. Em **Ajustes → Atualizar versão**, você pode buscar uma atualização e reiniciar o Bardo.gg assim que ela estiver pronta.
+- Atualizações assinadas em segundo plano. Em **Ajustes → Atualizar versão**, você pode buscar uma atualização e reiniciar o Bardola assim que ela estiver pronta.
 
 ## Instalar
 
-Windows 10 (2004 ou posterior) ou Windows 11 x64 com **[.NET Desktop Runtime 10](https://dotnet.microsoft.com/download/dotnet/10.0)**. Baixe `Instalar-Bardo.gg.exe` em [Releases](https://github.com/robertfxbr/Bardola/releases/latest), execute uma vez e use o atalho **Bardo.gg**. Não são necessários direitos de administrador. O app não substitui seu cliente do League.
+Windows 10 (2004 ou posterior) ou Windows 11 x64 com **[.NET Desktop Runtime 10](https://dotnet.microsoft.com/download/dotnet/10.0)**. Baixe `Instalar-Bardo.gg.exe` em [Releases](https://github.com/robertfxbr/Bardola/releases/latest), execute uma vez e abra o Bardola pelo atalho criado na instalação. Não são necessários direitos de administrador. O app não substitui seu cliente do League.
 
-O instalador contém o aplicativo inicial e funciona sem internet para instalar. Builds e imagens precisam de internet na primeira consulta. Depois da instalação, novas versões publicadas são baixadas automaticamente; a aplicação ocorre ao fechar e abrir o Bardo.gg, preservando preferências e favoritos.
+O instalador contém o aplicativo inicial e funciona sem internet para instalar. Builds e imagens precisam de internet na primeira consulta. Depois da instalação, novas versões publicadas são baixadas automaticamente; a aplicação ocorre ao fechar e abrir o Bardola, preservando preferências e favoritos.
 
 ## Estado do projeto
 
@@ -56,8 +56,8 @@ Quem criar um fork deve configurar seu próprio repositório e par de chaves ant
 
 ## Privacidade e licença
 
-O app usa a sessão local do cliente; não pede senha, não salva a credencial da sessão e não envia dados da conta a um servidor do Bardo.gg. Preferências, cache, sessões e backups ficam em `%LOCALAPPDATA%/Bardo.gg`. Consultas de builds e catálogo são feitas diretamente às fontes indicadas. Não lê memória de processo nem injeta código no jogo.
+O app usa a sessão local do cliente; não pede senha, não salva a credencial da sessão e não envia dados da conta a um servidor do Bardola. Preferências, cache, sessões e backups ficam em `%LOCALAPPDATA%/Bardo.gg`. Consultas de builds e catálogo são feitas diretamente às fontes indicadas. Não lê memória de processo nem injeta código no jogo.
 
 Código original sob **GPL-3.0**, conforme [LICENSE](LICENSE). Marcas, imagens e dados de terceiros seguem seus próprios termos: veja [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
 
-Bardo.gg is not endorsed by Riot Games and does not reflect the views or opinions of Riot Games or anyone officially involved in producing or managing Riot Games properties. Riot Games and all associated properties are trademarks or registered trademarks of Riot Games, Inc.
+Bardola is not endorsed by Riot Games and does not reflect the views or opinions of Riot Games or anyone officially involved in producing or managing Riot Games properties. Riot Games and all associated properties are trademarks or registered trademarks of Riot Games, Inc.
