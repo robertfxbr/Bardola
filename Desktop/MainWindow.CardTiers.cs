@@ -19,6 +19,29 @@ public partial class MainWindow
     readonly Canvas cardCanvas = new();
     OcrEngine? cardOcr;
     bool readingCards;
+    string translatedPatch="";
+    DateTimeOffset nextTranslationCheck;
+    bool loadingTranslations;
+    Dictionary<string,string> cardAliases=new();
+
+    async Task LoadCardAliases(string patch)
+    {
+        if(loadingTranslations || translatedPatch==patch || DateTimeOffset.UtcNow<nextTranslationCheck ||
+            !Version.TryParse(patch,out var version) || version.ToString(2)!=patch)return;
+        loadingTranslations=true;
+        try{
+            string root=$"https://raw.communitydragon.org/{patch}/plugins/rcp-be-lol-game-data/global";
+            var names=await Task.WhenAll(new[]{"default","pt_br"}.Select(locale=>
+                remote.TextAsync($"{root}/{locale}/v1/cherry-augments.json",lifetime.Token)));
+            var aliases=CardTranslations.Pair(names[0],names[1]);
+            if(aliases.Count==0)throw new System.IO.InvalidDataException();
+            cardAliases=aliases;
+            translatedPatch=patch;
+        }catch(Exception e) when(e is System.Net.Http.HttpRequestException or System.IO.IOException or System.IO.InvalidDataException or
+            System.Text.Json.JsonException or TimeoutException or OperationCanceledException){
+            nextTranslationCheck=DateTimeOffset.UtcNow.AddMinutes(5);
+        }finally{loadingTranslations=false;}
+    }
 
     void StartCardReader()
     {
@@ -32,7 +55,7 @@ public partial class MainWindow
         doc.AugmentTiers is {Count:>0};
 
     internal record CardHit(string Name, string Grade, double X, double Y);
-    static string CardKey(string text) => string.Concat(text.Where(char.IsLetterOrDigit)).ToUpperInvariant();
+    static string CardKey(string text) => string.Concat(text.Normalize(System.Text.NormalizationForm.FormD).Where(char.IsLetterOrDigit)).ToUpperInvariant();
 
     internal static async Task<List<CardHit>> MatchCards(BitmapSource band, Dictionary<string,string> tiers, OcrEngine engine)
     {
@@ -78,7 +101,13 @@ public partial class MainWindow
             var band=ScoreboardReader.CaptureCardBand();
             cardOcr??=OcrEngine.TryCreateFromUserProfileLanguages();
             if(cardOcr is null || band is null){cardOverlay?.Hide();return;}
-            var hits=await MatchCards(band,doc!.AugmentTiers!,cardOcr);
+            _=LoadCardAliases(catalog.Patch);
+            var tiers=new Dictionary<string,string>(doc!.AugmentTiers!,StringComparer.OrdinalIgnoreCase);
+            if(translatedPatch==catalog.Patch){
+                foreach(var (title,original) in cardAliases)
+                    if(doc.AugmentTiers!.TryGetValue(original,out var grade))tiers.TryAdd(title,grade);
+            }
+            var hits=await MatchCards(band,tiers,cardOcr);
             if(hits.Count==0 || current?.Document!=doc || !CanReadCards(doc) ||
                 !ScoreboardReader.GameBounds(out var now) || now!=bounds){cardOverlay?.Hide();return;}
             if(cardOverlay is null) {

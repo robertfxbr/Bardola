@@ -6,7 +6,8 @@ Companheiro independente para **League of Legends**, em português, sem Overwolf
 - Importação automática de itens, runas e feitiços na seleção de campeão; Flash no D ou F e backup da página de runas reutilizada.
 - Perfil da conta ativa no cliente, ranques e histórico recente, sem pedir a senha do LoL.
 - Arsenais locais por campeão e patch, com ordem de compra e variantes na loja. Em Ajustes, é possível adicionar arquivos JSON de arsenal do Blitz.
-- Tier das cartas do ARAM Desordem por campeão. O overlay opcional reconhece os títulos em inglês no modo sem bordas.
+- Tier das cartas do ARAM Desordem por campeão. O overlay reconhece títulos em inglês e português no modo sem bordas. A correspondência dos nomes usa o ID da carta nos catálogos do mesmo patch do CommunityDragon.
+- Placar com participação em abates e dano da equipe, dano mitigado e divisão de dano por tipo. O botão **Linha do tempo** abre os abates, estruturas e objetivos disponíveis no histórico.
 - Catálogo e imagens oficiais, favoritos, cache validado e exportação de conjuntos de itens.
 - Painel opcional de estatísticas próprias, build e prioridade de habilidades para modo sem bordas/segundo monitor.
 - Cronômetros automáticos no minimapa usando o modo avançado do próprio LoL; contadores de cura do ARAM sincronizados pelo placar.

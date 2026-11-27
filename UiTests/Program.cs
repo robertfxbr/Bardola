@@ -146,6 +146,8 @@ static class Program
                 return hits.Cast<object>().Select(h=>(string)h.GetType().GetProperty("Grade")!.GetValue(h)!).ToArray();
             }
             True(Read("Mad Scientist").SequenceEqual(new[]{"A","S","D"}));True(Read("Unknown Title").SequenceEqual(new[]{"A","D"}));
+            tiers.Add("Cientista Louco","S");
+            True(Read("Cientista Louco").SequenceEqual(new[]{"A","S","D"}));
         });
         if(args.Length==2 && args[0] is "--render" or "--render-rift" or "--render-settings") {
             var realCatalogPath=Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),"NexoLoL","catalog.json");
@@ -199,6 +201,8 @@ static class Program
             root.Measure(new Size(w,h));root.Arrange(new Rect(0,0,w,h));root.UpdateLayout();
             var labels=Descendants<TextBlock>(details).Select(t=>t.Text).ToList();
             True(teams.SelectMany(t=>t.Players).All(p=>labels.Contains(p.Name)));
+            True(labels.Any(l=>l.EndsWith("% PA")) && labels.Any(l=>l.EndsWith('%')));
+            True(Descendants<Button>(details).Any(b=>Equals(b.Content,"Linha do tempo")));
             double lastBottom=images.Last().TranslatePoint(new Point(0,images.Last().ActualHeight),page).Y;
             True(page.ViewportHeight>0 && page.ScrollableHeight==0 && lastBottom>0 && lastBottom<=page.ViewportHeight);
             Console.WriteLine($"  {w} × {h} · viewport {page.ViewportHeight:0} · rolagem {page.ScrollableHeight:0}");

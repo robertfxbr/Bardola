@@ -148,11 +148,20 @@ Test("placar associa jogadores por ID, conserva cartas escolhidas e bloqueia his
     var self=teams[0].Players.Single();True(self.Local && self.Name=="Meu Shen" && self.Damage==52694 && self.Cards.SequenceEqual(new[]{1053,1324,3134}));
     True(teams[1].Players.Single().Items.SequenceEqual(new[]{3084}));
     True(MatchRoster.FromHistory(doc,"other",10).Count==0 && MatchRoster.FromHistory(doc,"self",11).Count==0);
+    var timeline=System.Text.Json.Nodes.JsonNode.Parse("""{"frames":[{"events":[{"timestamp":21000,"type":"CHAMPION_KILL","killerId":1,"victimId":2},{"timestamp":4000,"type":"BUILDING_KILL","buildingType":"TOWER_BUILDING"},{"type":"ITEM_SOLD","timestamp":100}]}]}""");
+    var events=MatchTimeline.Read(timeline,doc,"self",10);
+    True(events.Count==2 && events[0].Seconds==4 && events[1].KillerChampion==98 && events[1].VictimChampion==17);
+    True(MatchTimeline.Read(timeline,doc,"other",10).Count==0);
     var end=System.Text.Json.Nodes.JsonNode.Parse("""
     {"teams":[{"teamId":100,"isWinningTeam":false,"players":[{"championId":98,"puuid":"self","items":[1,0,3],"stats":{"PLAYER_AUGMENT_4":3134,"NUM_DEATHS":12}}]}]}
     """)!;
     var player=MatchRoster.FromEnd(end,"self").Single().Players.Single();
     True(player.Local && player.Deaths==12 && player.Items.SequenceEqual(new[]{1,3}) && player.Cards.SequenceEqual(new[]{3134}));
+});
+Test("cartas traduzidas usam o mesmo ID e descartam títulos ambíguos",()=>{
+    var names=CardTranslations.Pair("""[{"id":53,"nameTRA":"Mad Scientist"},{"id":40,"nameTRA":"Other"},{"id":41,"nameTRA":"Third"}]""",
+        """[{"id":41,"nameTRA":"Igual"},{"id":53,"nameTRA":"Cientista Louco"},{"id":40,"nameTRA":"Igual"},{"id":100,"nameTRA":"Sem par"}]""");
+    Equal(1,names.Count);Equal("Mad Scientist",names["Cientista Louco"]);
 });
 Console.WriteLine($"\n{passed} passed, {failed} failed");
 Environment.ExitCode=failed>0?1:0;

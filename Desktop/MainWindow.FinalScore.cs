@@ -134,22 +134,30 @@ public partial class MainWindow
             box.Children.Add(Line(value.Value.ToString("N0",Pt),21,true,Brushes.White));box.Children.Add(Line(label,11,false,muted));metrics.Children.Add(box);}
         Metric("Dano a campeões",match.ChampionDamage);Metric("Dano recebido",match.DamageTaken);Metric("Cura e escudo em aliados",match.AllyHealingAndShielding);
         if(match.DamageTaken is int taken)Metric("Dano recebido por vida",(int)Math.Round(taken/(double)(match.Deaths+1)));
+        Metric("Dano mitigado",local?.Mitigated);
         content.Children.Add(metrics);
         var loadout=new StackPanel{Orientation=Orientation.Horizontal,Margin=new Thickness(0,10,0,0)};
         void Group(string label,List<int>? ids,bool cards){if(ids is not {Count:>0})return;
             var text=Line(label,11,true,cards?gold:muted);text.VerticalAlignment=VerticalAlignment.Center;text.Margin=new Thickness(0,0,7,0);
             loadout.Children.Add(text);var icons=Badges(ids,cards,25);icons.Margin=new Thickness(0,0,13,0);loadout.Children.Add(icons);}
         Group("Cartas",local?.Cards,true);Group("Itens finais",match.Items,false);
-        content.Children.Add(loadout);hero.Children.Add(content);surface.Children.Add(hero);
+        content.Children.Add(loadout);hero.Children.Add(content);
+        var timeline=Button("Linha do tempo",()=>ShowMatchTimeline(match));
+        timeline.HorizontalAlignment=HorizontalAlignment.Right;timeline.VerticalAlignment=VerticalAlignment.Top;
+        timeline.Margin=new Thickness(0,10,12,0);hero.Children.Add(timeline);
+        surface.Children.Add(hero);
 
         if(teams.Count>0){
             var board=new System.Windows.Controls.Primitives.UniformGrid{Columns=2,Margin=new Thickness(0,10,0,0)};
-            int maxDamage=Math.Max(1,teams.SelectMany(t=>t.Players).Select(p=>p.Damage??0).DefaultIfEmpty().Max());
             foreach(var team in teams.OrderBy(t=>t.Id)){
                 bool blue=team.Id==100;var color=Brush(blue?"#73C9F8":"#FB9B8F");
                 var list=new StackPanel();
                 var heading=new DockPanel{Margin=new Thickness(10,7,10,6)};
-                string totalDamage=team.Players.All(p=>p.Damage.HasValue)?team.Players.Sum(p=>(long)(p.Damage??0)).ToString("N0",Pt)+" dano    ·    ":"";
+                long? damageSum=team.Players.All(p=>p.Damage.HasValue)?team.Players.Sum(p=>(long)p.Damage!.Value):null;
+                long kills=team.Players.Sum(p=>(long)p.Kills);
+                bool fullTeam=team.Players.Count==5;
+                bool knownKills=fullTeam && kills>0 && team.Players.All(p=>p.HasKills);
+                string totalDamage=damageSum?.ToString("N0",Pt) is string amount?amount+" dano    ·    ":"";
                 var total=Line($"{totalDamage}{team.Players.Sum(p=>p.Kills)} / {team.Players.Sum(p=>p.Deaths)} / {team.Players.Sum(p=>p.Assists)}",12,true,muted);
                 DockPanel.SetDock(total,Dock.Right);heading.Children.Add(total);
                 heading.Children.Add(Line((team.Id switch{100=>"Equipe azul",200=>"Equipe vermelha",_=>$"Equipe {team.Id}"})+
@@ -179,12 +187,30 @@ public partial class MainWindow
                     kit.Children.Add(Badges(player.Items,false,18));
                     if(player.Cards.Count>0){var cards=Badges(player.Cards,true,17);cards.Margin=new Thickness(0,3,0,0);kit.Children.Add(cards);}Cell(kit,2);
                     var stat=new StackPanel{VerticalAlignment=VerticalAlignment.Center};
-                    stat.Children.Add(Line($"{player.Kills}/{player.Deaths}/{player.Assists}",12,true,Brushes.White));stat.Children.Add(Line($"{player.Cs} CS",10,false,muted));Cell(stat,3);
+                    stat.Children.Add(Line($"{player.Kills}/{player.Deaths}/{player.Assists}",12,true,Brushes.White));
+                    stat.Children.Add(Line($"{player.Cs} CS",10,false,muted));
+                    long involved=(long)player.Kills+player.Assists;
+                    if(knownKills && player.HasAssists && involved<=kills){
+                        var kp=Line((100.0*involved/kills).ToString("0",Pt)+"% PA",10,true,color);
+                        kp.ToolTip=$"Participação em {involved} dos {kills} abates da equipe";
+                        stat.Children.Add(kp);
+                    }
+                    Cell(stat,3);
                     var damage=new StackPanel{VerticalAlignment=VerticalAlignment.Center,Margin=new Thickness(0,0,8,0)};
                     damage.Children.Add(Line(player.Damage?.ToString("N0",Pt)??"—",12,true,Brushes.White));
-                    var bar=new Grid{Height=3,Margin=new Thickness(0,4,0,0),Background=Brush("#333947")};
-                    double ratio=(player.Damage??0)/(double)maxDamage;bar.ColumnDefinitions.Add(new(){Width=new GridLength(ratio,GridUnitType.Star)});bar.ColumnDefinitions.Add(new(){Width=new GridLength(1-ratio,GridUnitType.Star)});
-                    bar.Children.Add(new Border{Background=color});damage.Children.Add(bar);damage.ToolTip="Dano a campeões";Cell(damage,4);
+                    if(fullTeam && damageSum is >0 && player.Damage is int dealt){
+                        double share=dealt/(double)damageSum.Value;
+                        var bar=new Grid{Height=3,Margin=new Thickness(0,4,0,0),Background=Brush("#333947")};
+                        bar.ColumnDefinitions.Add(new(){Width=new GridLength(share,GridUnitType.Star)});
+                        bar.ColumnDefinitions.Add(new(){Width=new GridLength(1-share,GridUnitType.Star)});
+                        bar.Children.Add(new Border{Background=color});damage.Children.Add(bar);
+                        damage.Children.Add(Line((100*share).ToString("0.#",Pt)+"%",10,true,color));
+                    }
+                    var breakdown=new List<string>{"Dano a campeões · participação no dano da equipe"};
+                    if(player.Physical is int physical)breakdown.Add($"Físico   {physical.ToString("N0",Pt)}");
+                    if(player.Magic is int magic)breakdown.Add($"Mágico   {magic.ToString("N0",Pt)}");
+                    if(player.TrueDamage is int pure)breakdown.Add($"Verdadeiro   {pure.ToString("N0",Pt)}");
+                    damage.ToolTip=string.Join(Environment.NewLine,breakdown);Cell(damage,4);
                     list.Children.Add(new Border{BorderBrush=Brush("#2C323F"),BorderThickness=new Thickness(0,1,0,0),Child=row});
                 }
                 board.Children.Add(new Border{Background=Brush("#1D2431"),BorderBrush=color,BorderThickness=new Thickness(0,2,0,0),

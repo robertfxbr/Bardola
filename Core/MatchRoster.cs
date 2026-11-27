@@ -2,7 +2,8 @@ using System.Text.Json.Nodes;
 
 namespace NexoLoL.Core;
 
-public record ScorePlayer(string Name,int Champion,bool Local,int Kills,int Deaths,int Assists,int Cs,int? Damage,List<int> Items,List<int> Cards);
+public record ScorePlayer(string Name,int Champion,bool Local,int Kills,int Deaths,int Assists,int Cs,int? Damage,List<int> Items,List<int> Cards,
+    int? Physical=null,int? Magic=null,int? TrueDamage=null,int? Mitigated=null,bool HasKills=true,bool HasAssists=true);
 public record ScoreTeam(int Id,bool? Win,List<ScorePlayer> Players);
 
 public static class MatchRoster
@@ -13,11 +14,17 @@ public static class MatchRoster
     {
         var s=p["stats"];
         int Stat(string a,string b)=>N(s?[history?a:b]);
+        int? Optional(string a,string b)=>FinalScore.Number(s?[history?a:b]);
         var items=history?Enumerable.Range(0,7).Select(i=>N(s?["item"+i])):(p["items"] as JsonArray)?.Select(N)??[];
         var cards=Enumerable.Range(1,6).Select(i=>N(s?["playerAugment"+i]??s?["PLAYER_AUGMENT_"+i])).Where(id=>id>0).ToList();
         return new(name,N(p["championId"]),local,Stat("kills","CHAMPIONS_KILLED"),Stat("deaths","NUM_DEATHS"),
             Stat("assists","ASSISTS"),Stat("totalMinionsKilled","MINIONS_KILLED")+Stat("neutralMinionsKilled","NEUTRAL_MINIONS_KILLED"),
-            FinalScore.Number(s?[history?"totalDamageDealtToChampions":"TOTAL_DAMAGE_DEALT_TO_CHAMPIONS"]),items.Where(id=>id>0).ToList(),cards);
+            Optional("totalDamageDealtToChampions","TOTAL_DAMAGE_DEALT_TO_CHAMPIONS"),items.Where(id=>id>0).ToList(),cards,
+            Optional("physicalDamageDealtToChampions","PHYSICAL_DAMAGE_DEALT_TO_CHAMPIONS"),
+            Optional("magicDamageDealtToChampions","MAGIC_DAMAGE_DEALT_TO_CHAMPIONS"),
+            Optional("trueDamageDealtToChampions","TRUE_DAMAGE_DEALT_TO_CHAMPIONS"),
+            Optional("damageSelfMitigated","DAMAGE_SELF_MITIGATED"),
+            Optional("kills","CHAMPIONS_KILLED").HasValue,Optional("assists","ASSISTS").HasValue);
     }
 
     public static List<ScoreTeam> FromEnd(JsonNode doc,string owner) =>

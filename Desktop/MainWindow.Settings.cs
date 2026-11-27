@@ -100,7 +100,7 @@ public partial class MainWindow
         import.Children.Add(SettingRow("Detectar campeão e modo","Acompanhar sua seleção no cliente do League.",AutoDetect.IsChecked==true,value=>AutoDetect.IsChecked=value));
         import.Children.Add(Button("Restaurar backup de runas",()=>RestoreRunes(this,new RoutedEventArgs()),top:14));ResearchDetails.Children.Add(Card(import));
         AddTimerSettings();
-        ResearchDetails.Children.Add(Card(SettingRow("Tier das cartas · ARAM Desordem","Em modo sem bordas, reconhece os títulos em inglês e mostra a nota da fonte para o seu campeão. Ative também a detecção de campeão ou abra a build correspondente.",preferences.CardTiers,v=>{preferences.CardTiers=v;if(!v)cardOverlay?.Hide();_=SavePreferences();})));
+        ResearchDetails.Children.Add(Card(SettingRow("Tier das cartas · ARAM Desordem","Reconhece os títulos em inglês e, com o catálogo do patch, em português. Em modo sem bordas, mostra a nota da carta para o seu campeão.",preferences.CardTiers,v=>{preferences.CardTiers=v;if(!v)cardOverlay?.Hide();_=SavePreferences();})));
         var title=Text("Painel durante a partida",21,true,top:8);title.Margin=new Thickness(0,8,0,8);ResearchDetails.Children.Add(title);
         ResearchDetails.Children.Add(Text("Janela flutuante para modo sem bordas ou segundo monitor. Aparece só em partida, quando ativada abaixo.",12,false,Muted));
         var grid=new Grid{Margin=new Thickness(0,12,0,0)};grid.ColumnDefinitions.Add(new());grid.ColumnDefinitions.Add(new());
